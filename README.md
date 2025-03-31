@@ -91,23 +91,61 @@ Tino-raspberrypi/        # Raspberry Pi control software
 
 ## Usage Instructions
 
-1. Start the system by running:
+1. Check the presence of the 4 batteries:
+
+   - 1 for wheels and leg
+   - 1 for head
+   - 1 for the Raspberry Pi (Powerbank)
+   - 1 for the Router (Powerbank)
+
+2. Unplug all of the blue cables from the Raspberry Pi.
+
+3. Connect all of the batteries and turn on all of the switches.
+
+4. Connect via VSCode to the Raspberry Pi in SSH mode.
+
+   4.1. Probably it will be usefull to download vscode in local via internet, then connet a cable ethernet al WAN del router [Do not disconnect any cable from the Raspberry Pi to the router] and reconnect via SSH.
+
+5. Reconnect the blue USB cables to the Raspberry Pi.
+
+6. Press the central button of the joystick to turn it on.
+
+7. Run the launcher
+
+8. Connet to the camera that is streaming with the instructions of the launcher.
+
+9. To stop the execution ctrl + c in the terminal x2-3 times.
+
+# SSH Connection
+
+0. Connect to the network "reTino" password "earthbound"
+
+1. Open VSCode
+
+2. Connect to the remote SSH
 
    ```
-   ./launcher.sh
+   tino@192.168.0.101
+   password: tino
    ```
 
-2. Access the camera stream at:
+3. Navigate to desktop -> Tino-raspberrypi
+
+4. Write in the terminal the information of the launcher
 
    ```
-   http://<raspberry-pi-ip>:5000/video_feed
+   bash/home/Tine/Desktop/Tino-raspberry/launcher.sh
    ```
 
-3. Control the robot with the gamepad:
-   - Left analog stick: Control head movement (HX, HY)
-   - Right analog stick: Control base movement (BF, BB)
-   - D-pad up/down: Control head pitch (HP)
-   - Triggers: Control leg movement
+5. Done!
+
+6. To view the camera stream, open a browser and go to:
+
+   ```
+   http://192.168.0.101:5000/video-feed
+   ```
+
+7. Control the robot.
 
 ## Communication Protocol
 

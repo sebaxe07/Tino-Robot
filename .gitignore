@@ -1,0 +1,17 @@
+# ROS 2 workspace artifacts
+tino_ws/build/
+tino_ws/install/
+tino_ws/log/
+
+# Python cache
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# VSCode and editor configs
+.vscode/
+*.swp
+
+# System files
+.DS_Store
+Thumbs.db

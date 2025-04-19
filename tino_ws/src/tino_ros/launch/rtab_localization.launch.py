@@ -4,6 +4,9 @@
 # Example:
 #   $ ros2 launch rtabmap_examples depthai.launch.py camera_model:=OAK-D
 
+# On VNC run export LD_LIBRARY_PATH=/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/aarch64-linux-gnu:/opt/ros/humble/lib:/usr/local/lib/:/home/orinano/dev/depthai-core/build/install/lib/
+
+
 import os
 
 from ament_index_python.packages import get_package_share_directory

@@ -24,7 +24,10 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            # Add your executables here if needed
+            'robot_controller = tino_ros.robot_controller_node:main',
+            'hardware_interface = tino_ros.hardware_interface_node:main',
+            'gamepad_node = tino_ros.gamepad_node:main',
+            'vr_interface_node = tino_ros.vr_interface_node:main',
         ],
     },
 )

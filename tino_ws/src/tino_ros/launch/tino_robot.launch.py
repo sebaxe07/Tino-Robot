@@ -1,9 +1,15 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.substitutions import LaunchConfiguration
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+import os
+from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
+    # Get the tino_ros package directory
+    tino_ros_dir = get_package_share_directory('tino_ros')
+
     return LaunchDescription([
         # Launch arguments
         DeclareLaunchArgument(
@@ -20,6 +26,17 @@ def generate_launch_description():
             'head_port',
             default_value='/dev/ttyUSB2',
             description='Serial port for head Arduino'
+        ),
+        
+        # Start pose detection system
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([
+                os.path.join(tino_ros_dir, 'launch', 'pose_detection.launch.py')
+            ]),
+            # You can pass additional parameters if needed
+            # launch_arguments={
+            #    'confidence_threshold': '0.6',
+            # }.items(),
         ),
 
         # Start Robot Controller Node

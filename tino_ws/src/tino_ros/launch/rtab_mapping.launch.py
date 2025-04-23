@@ -32,7 +32,7 @@ def generate_launch_description():
             PythonLaunchDescriptionSource([os.path.join(
                 get_package_share_directory('depthai_examples'), 'launch'),
                 '/stereo_inertial_node.launch.py']),
-                launch_arguments={'depth_aligned': 'false',
+                launch_arguments={'depth_aligned': 'false',  # Changed back to 'false'
                                   'enableRviz': 'false',
                                   'monoResolution': '400p'}.items(),
         ),

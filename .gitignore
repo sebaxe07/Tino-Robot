@@ -1,7 +1,10 @@
 # ROS 2 workspace artifacts
-tino_ws/build/
-tino_ws/install/
-tino_ws/log/
+tino_ws/build/**
+tino_ws/install/**
+tino_ws/log/**
+build/
+install/
+log/
 
 # Python cache
 **/__pycache__/

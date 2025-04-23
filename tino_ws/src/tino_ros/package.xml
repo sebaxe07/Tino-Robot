@@ -15,6 +15,14 @@
   <exec_depend>depthai_ros_driver</exec_depend>
   <exec_depend>rtabmap_ros</exec_depend>
 
+  <depend>sensor_msgs</depend>
+  <depend>vision_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>cv_bridge</depend>
+  <depend>python3-opencv</depend>
+  <depend>python3-numpy</depend>
+  <depend>python3-tensorrt-pip</depend>
+  <depend>python3-pycuda</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

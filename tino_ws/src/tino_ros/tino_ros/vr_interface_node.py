@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PoseWithCovarianceStamped, Twist
+from geometry_msgs.msg import PoseWithCovarianceStamped, Twist, PoseStamped
 from std_msgs.msg import String
 # Import any VR-specific libraries you'll need
 
@@ -14,10 +14,20 @@ class VRInterfaceNode(Node):
             '/robot_pose', 
             self.pose_callback,
             10)
+            
+        # Subscribe to human position data
+        self.human_position_sub = self.create_subscription(
+            PoseStamped,
+            '/vr/human_position',
+            self.human_position_callback,
+            10)
         
         # Publishers for VR-based control
         self.cmd_vel_pub = self.create_publisher(Twist, 'vr_cmd_vel', 10)
         self.head_cmd_pub = self.create_publisher(Twist, 'vr_head_cmd', 10)
+        
+        # Store human position data
+        self.human_position = None
         
         # Initialize VR communication
         self.setup_vr_communication()
@@ -32,7 +42,21 @@ class VRInterfaceNode(Node):
     def pose_callback(self, msg):
         """Send robot pose to VR system"""
         # Send the pose data to VR system
+        # This would be implemented based on the specific VR system
         pass
+    
+    def human_position_callback(self, msg):
+        """Process human position data and send to VR system"""
+        self.human_position = msg
+        
+        # Log receipt of human position data
+        pos = msg.pose.position
+        self.get_logger().info(
+            f'VR: Human position received: ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f})'
+        )
+        
+        # Send the human position data to the VR system
+        # This would be implemented based on the specific VR system
     
     def vr_command_callback(self, vr_data):
         """Process commands from VR system and publish to ROS topics"""
@@ -64,5 +88,5 @@ def main(args=None):
 
 
 if __name__ == '__main__':
-    main()  
+    main()
 

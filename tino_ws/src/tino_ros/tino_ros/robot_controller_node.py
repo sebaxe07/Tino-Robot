@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
-from geometry_msgs.msg import Twist, PoseWithCovarianceStamped
+from geometry_msgs.msg import Twist, PoseWithCovarianceStamped, PoseStamped
 import numpy as np
 
 class RobotControllerNode(Node):
@@ -14,12 +14,23 @@ class RobotControllerNode(Node):
 
         self.pose_pub = self.create_publisher(
             PoseWithCovarianceStamped, '/robot_pose', 10)
+            
+        # Publisher for human position to VR interface
+        self.human_position_pub = self.create_publisher(
+            PoseStamped, '/vr/human_position', 10)
        
         # Subscribe to localization pose from rtabmap
         self.pose_sub = self.create_subscription(
             PoseWithCovarianceStamped,
             '/localization_pose', 
             self.pose_callback,
+            10)
+        
+        # Subscribe to human position from pose detection
+        self.human_position_sub = self.create_subscription(
+            PoseStamped,
+            '/human_position',
+            self.human_position_callback,
             10)
         
         # Subscribe to VR commands
@@ -31,6 +42,10 @@ class RobotControllerNode(Node):
         # Store the latest pose information
         self.current_pose = None
         self.pose_received = False
+        
+        # Store the latest human position information
+        self.human_position = None
+        self.human_detected = False
         
         # Create timer for controller update
         self.timer = self.create_timer(0.1, self.control_loop)
@@ -62,6 +77,20 @@ class RobotControllerNode(Node):
             f'Orientation ({ori.x:.2f}, {ori.y:.2f}, {ori.z:.2f}, {ori.w:.2f})'
         )
     
+    def human_position_callback(self, msg):
+        """Process incoming human position data"""
+        self.human_position = msg
+        self.human_detected = True
+        
+        # Log human position information
+        pos = msg.pose.position
+        self.get_logger().info(
+            f'Human detected: Position ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f})'
+        )
+        
+        # Forward the human position to the VR interface
+        self.human_position_pub.publish(msg)
+    
     def vr_cmd_callback(self, msg):
         # Process and forward VR commands to hardware
         self.base_pub.publish(msg)
@@ -76,20 +105,11 @@ class RobotControllerNode(Node):
             # No pose data yet
             return
             
-        # For now, just keep track of the pose data
-        # In the future, this will process VR input and generate commands
+        # You could implement more complex control logic here
+        # For example, processing both robot pose and human position
+        # to control the robot's movement based on the human's location
         
-        # Example of sending data from here (currently empty commands)
-        # This would be replaced with actual commands from VR system
-        base_cmd = Twist()
-        head_cmd = Twist()
-        
-        # When VR system is integrated, commands would be set here
-        # base_cmd.linear.x = vr_forward_command
-        # base_cmd.angular.z = vr_rotation_command
-        
-        # self.base_pub.publish(base_cmd)
-        # self.head_pub.publish(head_cmd)
+        # For now, we're just forwarding the data between systems
 
 def main(args=None):
     rclpy.init(args=args)

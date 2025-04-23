@@ -14,6 +14,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
         (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
+        (os.path.join('share', package_name, 'resource'), glob('resource/*')),  
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -28,6 +29,8 @@ setup(
             'hardware_interface = tino_ros.hardware_interface_node:main',
             'gamepad_node = tino_ros.gamepad_node:main',
             'vr_interface_node = tino_ros.vr_interface_node:main',
+            'pose_detection = tino_ros.pose_detection_node:main',
+            'camera_republisher = tino_ros.camera_republisher_node:main',
         ],
     },
 )

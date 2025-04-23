@@ -7,7 +7,7 @@ import numpy as np
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CameraInfo
 from visualization_msgs.msg import Marker, MarkerArray
-from geometry_msgs.msg import Point, PoseStamped, Pose
+from geometry_msgs.msg import Point, PoseStamped, Pose, PoseArray
 from std_msgs.msg import ColorRGBA
 from ultralytics import YOLO
 import os
@@ -83,6 +83,18 @@ class PoseDetectionNode(Node):
             '/human_position',
             10)
             
+        # New publisher for skeleton keypoints
+        self.skeleton_publisher = self.create_publisher(
+            MarkerArray,
+            '/human_skeleton',
+            10)
+            
+        # New publisher for skeleton poses (for programmatic use)
+        self.skeleton_poses_publisher = self.create_publisher(
+            PoseArray,
+            '/human_skeleton_poses',
+            10)
+            
         # Initialize variables
         self.latest_image = None
         self.latest_depth_image = None
@@ -91,6 +103,35 @@ class PoseDetectionNode(Node):
         # For averaging human positions over time to reduce jitter
         self.position_history = []
         self.history_size = 5
+        
+        # Define skeleton connections (which keypoints are connected)
+        # Based on COCO keypoint format used by YOLO
+        self.skeleton_connections = [
+            (0, 1),  # nose to left_eye
+            (0, 2),  # nose to right_eye
+            (1, 3),  # left_eye to left_ear
+            (2, 4),  # right_eye to right_ear
+            (5, 6),  # left_shoulder to right_shoulder
+            (5, 7),  # left_shoulder to left_elbow
+            (7, 9),  # left_elbow to left_wrist
+            (6, 8),  # right_shoulder to right_elbow
+            (8, 10), # right_elbow to right_wrist
+            (5, 11), # left_shoulder to left_hip
+            (6, 12), # right_shoulder to right_hip
+            (11, 12), # left_hip to right_hip
+            (11, 13), # left_hip to left_knee
+            (13, 15), # left_knee to left_ankle
+            (12, 14), # right_hip to right_knee
+            (14, 16)  # right_knee to right_ankle
+        ]
+        
+        # Keypoint names for reference
+        self.keypoint_names = [
+            'nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear',
+            'left_shoulder', 'right_shoulder', 'left_elbow', 'right_elbow',
+            'left_wrist', 'right_wrist', 'left_hip', 'right_hip',
+            'left_knee', 'right_knee', 'left_ankle', 'right_ankle'
+        ]
         
         self.get_logger().info(f'Pose detection node initialized with image topic: {self.image_topic}')
         self.get_logger().info(f'Using camera frame: {self.camera_frame}')
@@ -135,6 +176,32 @@ class PoseDetectionNode(Node):
                 
         except Exception as e:
             self.get_logger().error(f'Error in pose detection: {e}')
+    
+    def get_depth_at_point(self, x, y, window_size=5):
+        """Get the median depth value at a specific point with a small window"""
+        # Ensure coordinates are within image boundaries
+        h, w = self.latest_depth_image.shape
+        x = max(0, min(x, w-1))
+        y = max(0, min(y, h-1))
+        
+        # Define the window
+        half_size = window_size // 2
+        x1 = max(0, x - half_size)
+        y1 = max(0, y - half_size)
+        x2 = min(w, x + half_size + 1)
+        y2 = min(h, y + half_size + 1)
+        
+        # Extract depth values in the window
+        depth_window = self.latest_depth_image[y1:y2, x1:x2]
+        
+        # Filter out zero or invalid depth values
+        valid_depths = depth_window[depth_window > 0]
+        
+        if len(valid_depths) > 0:
+            # Use median to be robust against outliers
+            return np.median(valid_depths)
+        else:
+            return 0  # No valid depth values found
     
     def get_median_depth(self, x1, y1, x2, y2, padding_factor=0.25):
         """Get the median depth value in the central region of the detected person's bounding box"""
@@ -250,6 +317,10 @@ class PoseDetectionNode(Node):
                         position_marker.color = ColorRGBA(r=0.0, g=1.0, b=0.0, a=0.8)
                         
                         marker_array.markers.append(position_marker)
+                        
+                        # Process keypoints if available (only for the first person detected)
+                        if hasattr(result, 'keypoints') and len(result.keypoints) > 0:
+                            self.process_skeleton(result.keypoints[i], depth_value, human_position)
             except Exception as e:
                 self.get_logger().error(f'Error creating marker for detection {i}: {e}')
                 
@@ -259,6 +330,150 @@ class PoseDetectionNode(Node):
         # Publish human position if detected
         if has_person and human_position is not None:
             self.publish_human_position(human_position)
+    
+    def process_skeleton(self, keypoints, torso_depth, human_position):
+        """Process and publish skeleton keypoints"""
+        try:
+            # Create marker array for skeleton visualization
+            skeleton_markers = MarkerArray()
+            
+            # Create pose array for skeleton joint positions
+            skeleton_poses = PoseArray()
+            skeleton_poses.header.frame_id = self.camera_frame
+            skeleton_poses.header.stamp = self.get_clock().now().to_msg()
+            
+            # Get keypoints as numpy array
+            if hasattr(keypoints, 'xy'):
+                kpts = keypoints.xy.cpu().numpy()[0]  # Extract keypoints for the first person
+            
+                # Process each keypoint
+                joint_positions_3d = []
+                for idx, (x, y) in enumerate(kpts):
+                    # Ignore invalid keypoints (marked with 0,0 or negative values)
+                    if x <= 0 or y <= 0:
+                        # Add None for invalid keypoints
+                        joint_positions_3d.append(None)
+                        continue
+                    
+                    # Get depth at this keypoint
+                    kpt_depth = self.get_depth_at_point(int(x), int(y))
+                    
+                    # If depth is not available, use torso depth
+                    if kpt_depth == 0:
+                        kpt_depth = torso_depth
+                    
+                    # Calculate 3D position of this keypoint
+                    x_3d, y_3d, z_3d = self.calculate_3d_position(int(x), int(y), kpt_depth)
+                    joint_positions_3d.append((x_3d, y_3d, z_3d))
+                    
+                    # Create a sphere marker for this keypoint
+                    joint_marker = Marker()
+                    joint_marker.header.frame_id = self.camera_frame
+                    joint_marker.header.stamp = self.get_clock().now().to_msg()
+                    joint_marker.id = idx
+                    joint_marker.type = Marker.SPHERE
+                    joint_marker.action = Marker.ADD
+                    
+                    joint_marker.pose.position.x = x_3d
+                    joint_marker.pose.position.y = y_3d
+                    joint_marker.pose.position.z = z_3d
+                    joint_marker.pose.orientation.w = 1.0
+                    
+                    joint_marker.scale.x = 0.05  # Joint size
+                    joint_marker.scale.y = 0.05
+                    joint_marker.scale.z = 0.05
+                    
+                    # Color by joint type
+                    if idx in [0, 1, 2, 3, 4]:  # Head keypoints
+                        joint_marker.color = ColorRGBA(r=1.0, g=0.0, b=0.0, a=0.8)
+                    elif idx in [5, 6, 7, 8, 9, 10]:  # Arm keypoints
+                        joint_marker.color = ColorRGBA(r=0.0, g=1.0, b=0.0, a=0.8)
+                    else:  # Leg keypoints
+                        joint_marker.color = ColorRGBA(r=0.0, g=0.0, b=1.0, a=0.8)
+                    
+                    skeleton_markers.markers.append(joint_marker)
+                    
+                    # Add to pose array
+                    pose = Pose()
+                    pose.position.x = x_3d
+                    pose.position.y = y_3d
+                    pose.position.z = z_3d
+                    pose.orientation.w = 1.0
+                    skeleton_poses.poses.append(pose)
+                    
+                    # Add text marker with joint name
+                    text_marker = Marker()
+                    text_marker.header.frame_id = self.camera_frame
+                    text_marker.header.stamp = self.get_clock().now().to_msg()
+                    text_marker.id = idx + 100  # Offset to avoid ID collision
+                    text_marker.type = Marker.TEXT_VIEW_FACING
+                    text_marker.action = Marker.ADD
+                    
+                    text_marker.pose.position.x = x_3d
+                    text_marker.pose.position.y = y_3d
+                    text_marker.pose.position.z = z_3d + 0.1  # Offset text slightly above joint
+                    
+                    text_marker.scale.z = 0.05  # Text size
+                    text_marker.color = ColorRGBA(r=1.0, g=1.0, b=1.0, a=0.8)
+                    text_marker.text = self.keypoint_names[idx]
+                    
+                    skeleton_markers.markers.append(text_marker)
+                
+                # Create lines connecting the joints according to skeleton structure
+                marker_id = 1000  # Starting ID for line markers
+                for connection in self.skeleton_connections:
+                    idx1, idx2 = connection
+                    
+                    # Check if both keypoints are valid
+                    if (idx1 < len(joint_positions_3d) and idx2 < len(joint_positions_3d) and 
+                        joint_positions_3d[idx1] is not None and joint_positions_3d[idx2] is not None):
+                        
+                        line_marker = Marker()
+                        line_marker.header.frame_id = self.camera_frame
+                        line_marker.header.stamp = self.get_clock().now().to_msg()
+                        line_marker.id = marker_id
+                        line_marker.type = Marker.LINE_STRIP
+                        line_marker.action = Marker.ADD
+                        
+                        # Add the two points for this line
+                        p1 = Point()
+                        p1.x = joint_positions_3d[idx1][0]
+                        p1.y = joint_positions_3d[idx1][1]
+                        p1.z = joint_positions_3d[idx1][2]
+                        
+                        p2 = Point()
+                        p2.x = joint_positions_3d[idx2][0]
+                        p2.y = joint_positions_3d[idx2][1]
+                        p2.z = joint_positions_3d[idx2][2]
+                        
+                        line_marker.points = [p1, p2]
+                        
+                        # Set width of the line
+                        line_marker.scale.x = 0.02
+                        
+                        # Color by body part
+                        if idx1 <= 4 and idx2 <= 4:  # Head connections
+                            line_marker.color = ColorRGBA(r=1.0, g=0.0, b=0.0, a=0.8)
+                        elif idx1 <= 10 and idx2 <= 10:  # Arms and shoulders
+                            line_marker.color = ColorRGBA(r=0.0, g=1.0, b=0.0, a=0.8)
+                        else:  # Legs
+                            line_marker.color = ColorRGBA(r=0.0, g=0.0, b=1.0, a=0.8)
+                        
+                        skeleton_markers.markers.append(line_marker)
+                        marker_id += 1
+                
+                # Publish skeleton markers
+                if skeleton_markers.markers:
+                    self.skeleton_publisher.publish(skeleton_markers)
+                    
+                # Publish skeleton poses
+                if skeleton_poses.poses:
+                    self.skeleton_poses_publisher.publish(skeleton_poses)
+                    
+                self.get_logger().info(f"Published skeleton with {len(joint_positions_3d)} valid keypoints")
+        
+        except Exception as e:
+            self.get_logger().error(f'Error processing skeleton: {str(e)}')
     
     def publish_human_position(self, position):
         """Publish the human position with smoothing"""

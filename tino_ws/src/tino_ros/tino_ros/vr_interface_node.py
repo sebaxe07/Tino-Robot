@@ -1,7 +1,8 @@
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PoseWithCovarianceStamped, Twist, PoseStamped
+from geometry_msgs.msg import PoseWithCovarianceStamped, Twist, PoseStamped, PoseArray
 from std_msgs.msg import String, Int16MultiArray
+from visualization_msgs.msg import MarkerArray
 # Import any VR-specific libraries you'll need
 
 class VRInterfaceNode(Node):
@@ -21,6 +22,18 @@ class VRInterfaceNode(Node):
             '/vr_in/human_position',
             self.human_position_callback,
             10)
+            
+        # Subscribe to human skeleton data
+        self.human_skeleton_sub = self.create_subscription(
+            MarkerArray,
+            '/vr_in/human_skeleton',
+            self.human_skeleton_callback,
+            10)
+        self.human_skeleton_poses_sub = self.create_subscription(
+            PoseArray,
+            '/vr_in/human_skeleton_poses',
+            self.human_skeleton_poses_callback,
+            10)
         
         # Publishers for VR-based control
         self.cmd_vel_pub = self.create_publisher(Twist, '/vr_out/cmd_vel', 10)
@@ -37,10 +50,14 @@ class VRInterfaceNode(Node):
         # Store human position data
         self.human_position = None
         
+        # Store skeleton data
+        self.human_skeleton = None
+        self.human_skeleton_poses = None
+        
         # Initialize VR communication
         self.setup_vr_communication()
         
-        self.get_logger().info('VR interface node initialized')
+        self.get_logger().info('VR interface node initialized with human skeleton tracking')
     
     def setup_vr_communication(self):
         """Set up communication with VR system"""
@@ -70,6 +87,26 @@ class VRInterfaceNode(Node):
         )
         
         # Send the human position data to the VR system
+        # This would be implemented based on the specific VR system
+        
+    # Human skeleton callbacks
+    def human_skeleton_callback(self, msg):
+        """Process human skeleton visualization data"""
+        self.human_skeleton = msg
+        
+        # Log receipt of skeleton data
+        self.get_logger().info(f'VR: Human skeleton visualization received with {len(msg.markers)} markers')
+        
+        # Send the skeleton visualization data to the VR system
+        # This would be implemented based on the specific VR system
+    
+    def human_skeleton_poses_callback(self, msg):
+        """Process human skeleton joint poses data"""
+        self.human_skeleton_poses = msg
+        
+        # Log receipt of skeleton poses data
+        self.get_logger().info(f'VR: Human skeleton poses received with {len(msg.poses)} joints')
+        
         # This would be implemented based on the specific VR system
     
     def vr_command_callback(self, vr_data):

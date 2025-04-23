@@ -1,7 +1,8 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String, Int16MultiArray
-from geometry_msgs.msg import Twist, PoseWithCovarianceStamped, PoseStamped
+from geometry_msgs.msg import Twist, PoseWithCovarianceStamped, PoseStamped, PoseArray
+from visualization_msgs.msg import MarkerArray
 import numpy as np
 
 class RobotControllerNode(Node):
@@ -18,6 +19,12 @@ class RobotControllerNode(Node):
         # Publisher for human position to VR interface
         self.human_position_pub = self.create_publisher(
             PoseStamped, '/vr_in/human_position', 10)
+            
+        # Publishers for human skeleton data to VR interface
+        self.human_skeleton_pub = self.create_publisher(
+            MarkerArray, '/vr_in/human_skeleton', 10)
+        self.human_skeleton_poses_pub = self.create_publisher(
+            PoseArray, '/vr_in/human_skeleton_poses', 10)
        
         # Subscribe to localization pose from rtabmap
         self.pose_sub = self.create_subscription(
@@ -31,6 +38,18 @@ class RobotControllerNode(Node):
             PoseStamped,
             '/human_position',
             self.human_position_callback,
+            10)
+            
+        # Subscribe to human skeleton data from pose detection
+        self.human_skeleton_sub = self.create_subscription(
+            MarkerArray,
+            '/human_skeleton',
+            self.human_skeleton_callback,
+            10)
+        self.human_skeleton_poses_sub = self.create_subscription(
+            PoseArray,
+            '/human_skeleton_poses',
+            self.human_skeleton_poses_callback,
             10)
         
         # Subscribe to VR commands
@@ -57,10 +76,14 @@ class RobotControllerNode(Node):
         self.human_position = None
         self.human_detected = False
         
+        # Store skeleton data
+        self.human_skeleton = None
+        self.human_skeleton_poses = None
+        
         # Create timer for controller update
         self.timer = self.create_timer(0.1, self.control_loop)
         
-        self.get_logger().info('Robot controller node initialized with localization and audio')
+        self.get_logger().info('Robot controller node initialized with localization, audio, and human skeleton tracking')
         
     def pose_callback(self, msg):
         """Process incoming localization pose data"""
@@ -116,6 +139,23 @@ class RobotControllerNode(Node):
     def vr_audio_callback(self, msg):
         """Forward VR audio to audio node for playback"""
         self.robot_audio_pub.publish(msg)
+        
+    # Skeleton callbacks
+    def human_skeleton_callback(self, msg):
+        """Process incoming human skeleton visualization data"""
+        self.human_skeleton = msg
+        
+        # Forward to VR interface
+        self.human_skeleton_pub.publish(msg)
+        self.get_logger().debug('Forwarded human skeleton visualization to VR')
+    
+    def human_skeleton_poses_callback(self, msg):
+        """Process incoming human skeleton joint poses"""
+        self.human_skeleton_poses = msg
+        
+        # Forward to VR interface
+        self.human_skeleton_poses_pub.publish(msg)
+        self.get_logger().debug(f'Forwarded human skeleton poses to VR: {len(msg.poses)} joints')
 
     def control_loop(self):
         """Main control loop that processes localization and sends commands"""

@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseWithCovarianceStamped, Twist, PoseStamped
-from std_msgs.msg import String
+from std_msgs.msg import String, Int16MultiArray
 # Import any VR-specific libraries you'll need
 
 class VRInterfaceNode(Node):
@@ -11,20 +11,28 @@ class VRInterfaceNode(Node):
         # Subscribe to robot pose from controller
         self.pose_sub = self.create_subscription(
             PoseWithCovarianceStamped,
-            '/robot_pose', 
+            '/vr_in/robot_pose', 
             self.pose_callback,
             10)
             
         # Subscribe to human position data
         self.human_position_sub = self.create_subscription(
             PoseStamped,
-            '/vr/human_position',
+            '/vr_in/human_position',
             self.human_position_callback,
             10)
         
         # Publishers for VR-based control
-        self.cmd_vel_pub = self.create_publisher(Twist, 'vr_cmd_vel', 10)
-        self.head_cmd_pub = self.create_publisher(Twist, 'vr_head_cmd', 10)
+        self.cmd_vel_pub = self.create_publisher(Twist, '/vr_out/cmd_vel', 10)
+        self.head_cmd_pub = self.create_publisher(Twist, '/vr_out/head_cmd', 10)
+
+        # Subscribe to Audio from controller
+        self.mic_audio_sub = self.create_subscription(
+            Int16MultiArray, '/vr_in/audio_output', self.mic_audio_callback, 10)
+
+        self.vr_audio_pub = self.create_publisher(
+            Int16MultiArray, '/vr_out/audio_input', 10)
+        
         
         # Store human position data
         self.human_position = None
@@ -42,6 +50,12 @@ class VRInterfaceNode(Node):
     def pose_callback(self, msg):
         """Send robot pose to VR system"""
         # Send the pose data to VR system
+        # This would be implemented based on the specific VR system
+        pass
+
+    def mic_audio_callback(self, msg):
+        """Process audio data from microphone and send to VR system"""
+        # Convert ROS message to VR-compatible format
         # This would be implemented based on the specific VR system
         pass
     

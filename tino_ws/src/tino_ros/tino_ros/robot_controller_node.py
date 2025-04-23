@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String
+from std_msgs.msg import String, Int16MultiArray
 from geometry_msgs.msg import Twist, PoseWithCovarianceStamped, PoseStamped
 import numpy as np
 
@@ -13,11 +13,11 @@ class RobotControllerNode(Node):
         self.head_pub = self.create_publisher(Twist, 'head_cmd', 10)
 
         self.pose_pub = self.create_publisher(
-            PoseWithCovarianceStamped, '/robot_pose', 10)
+            PoseWithCovarianceStamped, '/vr_in/robot_pose', 10)
             
         # Publisher for human position to VR interface
         self.human_position_pub = self.create_publisher(
-            PoseStamped, '/vr/human_position', 10)
+            PoseStamped, '/vr_in/human_position', 10)
        
         # Subscribe to localization pose from rtabmap
         self.pose_sub = self.create_subscription(
@@ -35,9 +35,19 @@ class RobotControllerNode(Node):
         
         # Subscribe to VR commands
         self.vr_cmd_sub = self.create_subscription(
-            Twist, 'vr_cmd_vel', self.vr_cmd_callback, 10)
+            Twist, '/vr_out/cmd_vel', self.vr_cmd_callback, 10)
         self.vr_head_cmd_sub = self.create_subscription(
-            Twist, 'vr_head_cmd', self.vr_head_cmd_callback, 10)
+            Twist, '/vr_out/head_cmd', self.vr_head_cmd_callback, 10)
+        
+        # Audio publishers and subscribers
+        self.mic_audio_sub = self.create_subscription(
+            Int16MultiArray, '/audio/mic_input', self.mic_audio_callback, 10)
+        self.vr_audio_sub = self.create_subscription(
+            Int16MultiArray, '/vr_out/audio_input', self.vr_audio_callback, 10)
+        self.vr_audio_pub = self.create_publisher(
+            Int16MultiArray, '/vr_in/audio_output', 10)
+        self.robot_audio_pub = self.create_publisher(
+            Int16MultiArray, '/audio/vr_output', 10)
         
         # Store the latest pose information
         self.current_pose = None
@@ -50,7 +60,7 @@ class RobotControllerNode(Node):
         # Create timer for controller update
         self.timer = self.create_timer(0.1, self.control_loop)
         
-        self.get_logger().info('Robot controller node initialized with localization')
+        self.get_logger().info('Robot controller node initialized with localization and audio')
         
     def pose_callback(self, msg):
         """Process incoming localization pose data"""
@@ -98,6 +108,14 @@ class RobotControllerNode(Node):
     def vr_head_cmd_callback(self, msg):
         # Process and forward VR head commands
         self.head_pub.publish(msg)
+
+    def mic_audio_callback(self, msg):
+        """Forward microphone audio to VR"""
+        self.vr_audio_pub.publish(msg)
+        
+    def vr_audio_callback(self, msg):
+        """Forward VR audio to audio node for playback"""
+        self.robot_audio_pub.publish(msg)
 
     def control_loop(self):
         """Main control loop that processes localization and sends commands"""

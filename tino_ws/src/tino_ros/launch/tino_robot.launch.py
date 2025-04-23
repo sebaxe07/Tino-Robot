@@ -62,6 +62,14 @@ def generate_launch_description():
             name='vr_interface_node',
             output='screen'
         ),
+
+        # Start the Audio node
+        Node(
+            package='tino_ros',
+            executable='audio_node',
+            name='audio_node',
+            output='screen'
+        ),
         
         # Start the hardware interface node
         Node(

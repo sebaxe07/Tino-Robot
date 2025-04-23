@@ -30,7 +30,8 @@ setup(
             'gamepad_node = tino_ros.gamepad_node:main',
             'vr_interface_node = tino_ros.vr_interface_node:main',
             'pose_detection = tino_ros.pose_detection_node:main',
-            'camera_republisher = tino_ros.camera_republisher_node:main',
+            'audio_node = tino_ros.audio_node:main',
+            'audio_loopback = tino_ros.audio_loopback:main',
         ],
     },
 )

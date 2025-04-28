@@ -4,17 +4,48 @@ A comprehensive control system for Tino, a multi-component robot featuring a mob
 
 ## Project Overview
 
-Tino Robot is built with a modular architecture consisting of three main Arduino-controlled components that communicate with a central Raspberry Pi:
+Tino Robot has evolved from a Raspberry Pi-controlled system to a modern ROS2-based implementation:
+
+### Current Implementation
+
+The current version of Tino Robot is built with a modular architecture running on a Jetson Orin Nano:
+
+- **Base**: Differential drive system with 2 wheels and a caster wheel
+- **Head**: Three-servo platform providing pan and tilt motion
+- **Leg**: Single-actuator mechanism
+- **Vision & Audio**: Integrated camera and audio for SLAM and human interaction
+
+The system provides real-time control via gamepad and includes advanced features like SLAM, human pose detection, and audio communication.
+
+### Legacy Implementation
+
+The original version of Tino Robot consists of three main Arduino-controlled components that communicate with a central Raspberry Pi:
 
 - **Base**: Holonomic movement system with omni-directional wheels
 - **Head**: Three-servo platform providing pan and tilt motion
 - **Leg**: Single-actuator mechanism with encoded motion
 
-The system provides real-time control via gamepad and includes video streaming capabilities through the Raspberry Pi camera.
+The legacy system provides real-time control via gamepad and includes video streaming capabilities through the Raspberry Pi camera.
 
 ## System Architecture
 
-### Hardware Components
+### Current Hardware Components
+
+- **3× Arduino boards** - controlling base, head, and leg mechanisms
+- **Jetson Orin Nano** - central controller running ROS2 Humble
+- **Motors and servos** - actuators for movement
+- **Luxonis Oak-D Pro Camera** - for visual SLAM with RTABMAP and pose detection
+- **Microphone and speaker** - for audio communication
+- **Gamepad** - user input device (Logitech Cordless RumblePad 2)
+
+### Current Software Components
+
+- **Arduino firmware** - motor control for robot components
+- **ROS2 Humble nodes** - distributed system for control, perception, and communication
+- **RTABMAP** - for Simultaneous Localization and Mapping (SLAM)
+- **DepthAI** - for Oak-D Pro camera integration
+
+### Legacy Hardware Components
 
 - **3× Arduino boards** - controlling base, head, and leg mechanisms
 - **Raspberry Pi** - central controller and video streaming server
@@ -23,7 +54,7 @@ The system provides real-time control via gamepad and includes video streaming c
 - **Camera** - for video streaming
 - **Gamepad** - user input device (Logitech Cordless RumblePad 2)
 
-### Software Components
+### Legacy Software Components
 
 - **Arduino firmware** - PID control loops and motor control
 - **Python controllers** - multiprocess serial communication and gamepad integration
@@ -31,38 +62,130 @@ The system provides real-time control via gamepad and includes video streaming c
 
 ## Directory Structure
 
+The project is divided into two main parts:
+
 ```
-base_tino/               # Arduino code for the base module
-  ├── base_tino.ino      # Main base control loop
-  ├── pinout.h           # Pin definitions for base
-  └── RaspberryCommunication.*  # Serial comms library
+legacy_tino/               # Legacy Arduino and Raspberry Pi code
+  ├── base_tino/           # Arduino code for the base module
+  ├── head_OL_tino_base/   # Arduino code for the head module
+  ├── leg_tino/            # Arduino code for the leg module
+  └── Tino-raspberrypi/    # Original Raspberry Pi control software
 
-head_OL_tino_base/       # Arduino code for the head module
-  ├── head_OL_tino_base.ino
-  └── RaspberryCommunication.*
-
-leg_tino/                # Arduino code for the leg module
-  ├── leg_tino.ino
-  └── RaspberryCommunication.*
-
-Tino-raspberrypi/        # Raspberry Pi control software
-  ├── launcher.sh        # Script to start the robot software
-  ├── main_camera.py     # Main entry point with camera support
-  ├── classes/           # Controller classes
-  ├── controller/        # Controller implementations
-  ├── stream/            # Camera streaming code
-  └── utils/             # Utilities and constants
+tino_ws/                   # Modern ROS2-based implementation
+  └── src/
+      └── tino_ros/        # ROS2 package for Tino robot
+          ├── launch/      # Launch files for different system configurations
+          ├── resource/    # Resource files (models, etc.)
+          └── tino_ros/    # Python implementation of ROS2 nodes
 ```
 
-## Setup Instructions
+## ROS2 Node Architecture
+
+The Tino ROS2 system consists of several interconnected nodes:
+
+- **robot_controller_node**: Central controller that coordinates all components
+- **hardware_interface_node**: Communicates with Arduino boards via serial
+- **gamepad_node**: Processes gamepad inputs for robot control
+- **pose_detection_node**: Human detection and skeleton tracking
+- **audio_node**: Handles audio input/output
+- **vr_interface_node**: Interface for potential VR integration
+
+### Key Topics and Messages
+
+- **/base_cmd_vel** (Twist): Commands for base movement
+- **/head_cmd** (Twist): Commands for head movement
+- **/human_position** (PoseStamped): Detected human position
+- **/human_skeleton** (MarkerArray): Visualization of detected human skeleton
+- **/localization_pose** (PoseWithCovarianceStamped): Robot's position from SLAM
+- **/audio/mic_input** and **/audio/vr_output** (Int16MultiArray): Audio data streams
+
+## Modern Setup Instructions
+
+### Hardware Setup
+
+1. Upload the appropriate sketch to each Arduino board:
+
+   - `legacy_tino/base_tino/base_tino.ino` to the base Arduino
+   - `legacy_tino/head_OL_tino_base/head_OL_tino_base.ino` to the head Arduino
+   - `legacy_tino/leg_tino/leg_tino.ino` to the leg Arduino
+
+2. Connect each Arduino to the Jetson Orin Nano via USB
+
+3. Connect the Oak-D Pro camera to the Jetson Orin Nano
+
+4. Connect microphone and speaker to the Jetson Orin Nano
+
+### Software Setup
+
+1. Install ROS2 Humble on the Jetson Orin Nano:
+
+   ```bash
+   # Follow ROS2 Humble installation instructions for Ubuntu 20.04
+   ```
+
+2. Install required ROS2 packages:
+
+   ```bash
+   sudo apt install ros-humble-rtabmap-ros ros-humble-depthai-ros
+   ```
+
+3. Create a symlink for the tino_ros package:
+
+   ```bash
+   mkdir -p ~/tino_ws/src
+   cd ~/tino_ws/src
+   ln -s /path/to/Tino-Robot/tino_ws/src/tino_ros .
+   cd ~/tino_ws
+   colcon build --symlink-install
+   source install/setup.bash
+   ```
+
+4. Install Python dependencies:
+   ```bash
+   pip install pyaudio numpy ultralytics evdev
+   ```
+
+### Modern Usage Instructions
+
+1. Connect all batteries and turn on the system:
+
+   - Battery for wheels and leg
+   - Battery for head
+   - Jetson Orin Nano power supply
+
+2. Launch the ROS2 system:
+
+   ```bash
+   # Full system with SLAM and pose detection
+   ros2 launch tino_ros tino_robot.launch.py
+
+   # For SLAM mapping mode
+   ros2 launch tino_ros rtab_mapping.launch.py
+
+   # For SLAM localization mode
+   ros2 launch tino_ros rtab_localization.launch.py
+   ```
+
+3. Turn on the gamepad by pressing the central button
+
+4. Control the robot using the gamepad:
+
+   - Left stick: Base forward/backward movement
+   - Bumper buttons: Base rotation
+   - Right stick: Head pan/tilt
+   - Other buttons: Additional controls
+
+5. To stop the system, press Ctrl+C in the terminal
+
+## Legacy Setup Instructions
 
 ### Arduino Setup
 
 1. Upload the appropriate sketch to each Arduino board:
 
-   - `base_tino/base_tino.ino` to the base Arduino
-   - `head_OL_tino_base/head_OL_tino_base.ino` to the head Arduino
-   - `leg_tino/leg_tino.ino` to the leg Arduino
+   - `legacy_tino/base_tino/base_tino.ino` to the base Arduino
+   - `legacy_tino/head_OL_tino_base/head_OL_tino_base.ino` to the head Arduino
+   - `legacy_tino/leg_tino/leg_tino.ino` to the leg Arduino
 
 2. Connect each Arduino to the Raspberry Pi via USB
 
@@ -89,7 +212,7 @@ Tino-raspberrypi/        # Raspberry Pi control software
 
 4. Connect the gamepad and camera to the Raspberry Pi
 
-## Usage Instructions
+## Legacy Usage Instructions
 
 1. Check the presence of the 4 batteries:
 
@@ -149,7 +272,7 @@ Tino-raspberrypi/        # Raspberry Pi control software
 
 ## Communication Protocol
 
-The Arduino modules and Raspberry Pi communicate using a simple serial protocol with key-value pairs:
+The Arduino modules and controllers communicate using a simple serial protocol with key-value pairs:
 
 - `BF`: Base Forward motion
 - `BB`: Base angular (rotation) motion
@@ -165,6 +288,22 @@ The Arduino modules and Raspberry Pi communicate using a simple serial protocol 
 
 ## Software Dependencies
 
+### Modern System
+
+- ROS2 Humble
+- rtabmap_ros
+- depthai_ros
+- pyaudio
+- numpy
+- ultralytics (for pose detection)
+- evdev (for gamepad input)
+- PySerial
+- Arduino libraries:
+  - CytronMotorDriver
+  - ezButton
+
+### Legacy System
+
 - Python 3
 - picamera2
 - Flask
@@ -174,7 +313,3 @@ The Arduino modules and Raspberry Pi communicate using a simple serial protocol 
 - Encoder (Arduino library)
 - CytronMotorDriver (Arduino library)
 - ezButton (Arduino library)
-
-## Disclaimer
-
-This README was automatically generated by GitHub Copilot based on the project structure and code analysis. It may not be entirely accurate or up-to-date. Please refer to the actual source code for the most reliable information.

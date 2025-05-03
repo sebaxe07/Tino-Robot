@@ -132,9 +132,6 @@ The Tino ROS2 system consists of several interconnected nodes:
 3. Create a symlink for the tino_ros package:
 
    ```bash
-   mkdir -p ~/tino_ws/src
-   cd ~/tino_ws/src
-   ln -s /path/to/Tino-Robot/tino_ws/src/tino_ros .
    cd ~/tino_ws
    colcon build --symlink-install
    source install/setup.bash
@@ -170,10 +167,9 @@ The Tino ROS2 system consists of several interconnected nodes:
 
 4. Control the robot using the gamepad:
 
-   - Left stick: Base forward/backward movement
+   - Left stick: Base forward movement
    - Bumper buttons: Base rotation
    - Right stick: Head pan/tilt
-   - Other buttons: Additional controls
 
 5. To stop the system, press Ctrl+C in the terminal
 

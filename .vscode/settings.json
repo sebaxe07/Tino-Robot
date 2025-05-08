@@ -5,5 +5,9 @@
     "arduino.defaultBaudRate": 9600,
     "arduino.logLevel": "info",
     "arduino.enableUSBDetection": true,
-    "C_Cpp.errorSquiggles": "disabled"
+    "C_Cpp.errorSquiggles": "disabled",
+    "files.associations": {
+        "*.css": "tailwindcss",
+        "cstring": "cpp"
+    }
 }

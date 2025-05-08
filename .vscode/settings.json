@@ -1,3 +1,9 @@
 {
-  "ros.distro": "jazzy"
+    "arduino.path": "~/bin",
+    "arduino.commandPath": "arduino-cli",
+    "arduino.useArduinoCli": true,
+    "arduino.defaultBaudRate": 9600,
+    "arduino.logLevel": "info",
+    "arduino.enableUSBDetection": true,
+    "C_Cpp.errorSquiggles": "disabled"
 }

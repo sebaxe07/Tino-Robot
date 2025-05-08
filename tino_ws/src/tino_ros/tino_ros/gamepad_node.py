@@ -196,6 +196,10 @@ class GamepadNode(Node):
         base_cmd.angular.z = float(self.bb)  # Rotation
         self.cmd_vel_pub.publish(base_cmd)
         
+        # Add debug log when movement commands are sent
+        if abs(self.bf) > 0.01 or abs(self.bb) > 0.01:
+            self.get_logger().info(f"MOVEMENT DEBUG: Publishing base movement - linear: {self.bf:.2f}, angular: {self.bb:.2f}")
+        
         # Publish head command
         head_cmd = Twist()
         head_cmd.angular.x = float(self.hp)  # Head pitch

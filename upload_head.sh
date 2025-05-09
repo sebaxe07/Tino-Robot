@@ -1,8 +1,8 @@
 #!/bin/bash
 # Script to compile and upload the head_OL_tino_base sketch to Elegoo UNO R3
 
-SOURCE_DIR="/home/orinano/Tino-Robot/legacy_tino/head_OL_tino_base"
-PORT="/dev/ttyACM0"
+SOURCE_DIR="/home/orinano/Tino-Robot/new_head_tino"
+PORT="/dev/ttyHEAD"
 BOARD="arduino:avr:uno"
 
 echo "Compiling and uploading head_OL_tino_base sketch..."

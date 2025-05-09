@@ -150,7 +150,7 @@ class GamepadNode(Node):
                             raw_value = event.value
                             
                             if self.is_neutral(raw_value, "right_x"):
-                                self.hy = 511.0
+                                self.hx = 511.0
                             else:
                                 if self.x_input_mode:
                                     # Map from X-input range to our 0-1024 range
@@ -163,7 +163,6 @@ class GamepadNode(Node):
                                     out_max = 1024 if event.value < 120 else 511
                                     self.hx = self.map_range(event.value, in_min, in_max, out_min, out_max)
                         elif event.code == 17:  # HP
-                            print(f"HP button pressed: {event.value}")
                             self.hp = -335 if event.value < 0 else (335 if event.value > 0 else 0)
                             
                     # Bumpers
@@ -195,10 +194,6 @@ class GamepadNode(Node):
         base_cmd.linear.x = float(self.bf)  # Forward/backward
         base_cmd.angular.z = float(self.bb)  # Rotation
         self.cmd_vel_pub.publish(base_cmd)
-        
-        # Add debug log when movement commands are sent
-        if abs(self.bf) > 0.01 or abs(self.bb) > 0.01:
-            self.get_logger().info(f"MOVEMENT DEBUG: Publishing base movement - linear: {self.bf:.2f}, angular: {self.bb:.2f}")
         
         # Publish head command
         head_cmd = Twist()

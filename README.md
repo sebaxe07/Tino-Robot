@@ -309,3 +309,156 @@ The Arduino modules and controllers communicate using a simple serial protocol w
 - Encoder (Arduino library)
 - CytronMotorDriver (Arduino library)
 - ezButton (Arduino library)
+
+## VR Interface Message Structure
+
+For developers integrating with the Unity VR system, here are the message structures you'll need to understand:
+
+### Messages to Send from Unity to ROS2
+
+1. **Robot Movement Commands** (`/vr_out/cmd_vel`, geometry_msgs/msg/Twist)
+   - Controls the robot's base movement
+   - Message structure:
+   ```
+   geometry_msgs/msg/Twist:
+     Vector3 linear
+       float64 x    # Forward/backward movement (-15.0 to 15.0)
+       float64 y    # Not used for differential drive
+       float64 z    # Not used
+     Vector3 angular
+       float64 x    # Not used
+       float64 y    # Not used
+       float64 z    # Rotation (-1.1 to 1.1, positive: counter-clockwise)
+   ```
+
+2. **Robot Head Commands** (`/vr_out/head_cmd`, geometry_msgs/msg/Twist)
+   - Controls the robot's head pan and tilt movements
+   - Message structure:
+   ```
+   geometry_msgs/msg/Twist:
+     Vector3 linear
+       float64 x    # Not used
+       float64 y    # Not used
+       float64 z    # Not used
+     Vector3 angular
+       float64 x    # Head pitch (-335, 0, or 335)
+       float64 y    # Head pan, normalized to [-1.0, 1.0] (positive: left)
+       float64 z    # Head tilt, normalized to [-1.0, 1.0] 
+   ```
+
+3. **Audio Data** (`/vr_out/audio_input`, std_msgs/msg/Int16MultiArray)
+   - Sends audio from VR system to the robot
+   - Message structure:
+   ```
+   std_msgs/msg/Int16MultiArray:
+     std_msgs/MultiArrayLayout layout
+       std_msgs/MultiArrayDimension[] dim
+         string label
+         uint32 size
+         uint32 stride
+       uint32 data_offset
+     int16[] data    # Audio samples (16-bit PCM)
+   ```
+
+### Messages to Receive in Unity from ROS2
+
+1. **Robot Pose** (`/vr_in/robot_pose`, geometry_msgs/msg/PoseWithCovarianceStamped)
+   - Provides the current position and orientation of the robot
+   - Message structure:
+   ```
+   geometry_msgs/msg/PoseWithCovarianceStamped:
+     std_msgs/Header header
+       uint32 seq
+       time stamp
+       string frame_id
+     geometry_msgs/PoseWithCovariance pose
+       geometry_msgs/Pose pose
+         geometry_msgs/Point position
+           float64 x
+           float64 y
+           float64 z
+         geometry_msgs/Quaternion orientation
+           float64 x
+           float64 y
+           float64 z
+           float64 w
+       float64[36] covariance
+   ```
+
+2. **Human Position** (`/vr_in/human_position`, geometry_msgs/msg/PoseStamped)
+   - Provides the position of detected humans
+   - Message structure:
+   ```
+   geometry_msgs/msg/PoseStamped:
+     std_msgs/Header header
+       uint32 seq
+       time stamp
+       string frame_id
+     geometry_msgs/Pose pose
+       geometry_msgs/Point position
+         float64 x
+         float64 y
+         float64 z
+       geometry_msgs/Quaternion orientation
+         float64 x
+         float64 y
+         float64 z
+         float64 w
+   ```
+
+3. **Human Skeleton** (`/vr_in/human_skeleton`, visualization_msgs/msg/MarkerArray)
+   - Provides visualization data for human skeleton
+   - Message structure:
+   ```
+   visualization_msgs/msg/MarkerArray:
+     visualization_msgs/Marker[] markers
+       # Each marker represents a joint or bone in the skeleton
+       std_msgs/Header header
+       string ns
+       int32 id
+       int32 type
+       int32 action
+       geometry_msgs/Pose pose
+       geometry_msgs/Vector3 scale
+       std_msgs/ColorRGBA color
+       duration lifetime
+       bool frame_locked
+       geometry_msgs/Point[] points
+       std_msgs/ColorRGBA[] colors
+       string text
+       string mesh_resource
+       bool mesh_use_embedded_materials
+   ```
+
+4. **Human Skeleton Poses** (`/vr_in/human_skeleton_poses`, geometry_msgs/msg/PoseArray)
+   - Provides joint positions for human skeleton
+   - Message structure:
+   ```
+   geometry_msgs/msg/PoseArray:
+     std_msgs/Header header
+     geometry_msgs/Pose[] poses
+       # Each pose represents a joint position
+       geometry_msgs/Point position
+         float64 x
+         float64 y
+         float64 z
+       geometry_msgs/Quaternion orientation
+         float64 x
+         float64 y
+         float64 z
+         float64 w
+   ```
+
+5. **Audio Output** (`/vr_in/audio_output`, std_msgs/msg/Int16MultiArray)
+   - Audio data from the robot's microphone
+   - Message structure:
+   ```
+   std_msgs/msg/Int16MultiArray:
+     std_msgs/MultiArrayLayout layout
+       std_msgs/MultiArrayDimension[] dim
+         string label
+         uint32 size
+         uint32 stride
+       uint32 data_offset
+     int16[] data    # Audio samples (16-bit PCM)
+   ```

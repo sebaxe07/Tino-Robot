@@ -14,17 +14,17 @@ def generate_launch_description():
         # Launch arguments
         DeclareLaunchArgument(
             'base_port',
-            default_value='/dev/ttyACM1',  # Updated to new port
+            default_value='/dev/ttyBASE',  # Updated to new port
             description='Serial port for base Arduino'
         ),
         DeclareLaunchArgument(
             'leg_port',
-            default_value='none',  # Set to 'none' since it's not connected
+            default_value='/dev/ttyLEG',  # Set to 'none' since it's not connected
             description='Serial port for leg Arduino'
         ),
         DeclareLaunchArgument(
             'head_port',
-            default_value='none',  # Set to 'none' since it's not connected
+            default_value='/dev/ttyHEAD',  # Set to 'none' since it's not connected
             description='Serial port for head Arduino'
         ),
         

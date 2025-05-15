@@ -109,6 +109,8 @@ class RobotControllerNode(Node):
             f'Pose update: Position ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f}), '
             f'Orientation ({ori.x:.2f}, {ori.y:.2f}, {ori.z:.2f}, {ori.w:.2f})'
         )
+
+        self.pose_pub.publish(msg)
     
     def human_position_callback(self, msg):
         """Process incoming human position data"""

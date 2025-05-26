@@ -1,6 +1,46 @@
 #include <Servo.h>
 #include "RaspberryCommunication.h"
 
+// Debug flag - set to true to enable debug prints, false to disable
+#define DEBUG_MODE true
+
+// Debug print helper functions
+void debug_print(const char* message) {
+  if (DEBUG_MODE) {
+    Serial.print(message);
+  }
+}
+
+void debug_print(float value) {
+  if (DEBUG_MODE) {
+    Serial.print(value);
+  }
+}
+
+void debug_print(int value) {
+  if (DEBUG_MODE) {
+    Serial.print(value);
+  }
+}
+
+void debug_println(const char* message) {
+  if (DEBUG_MODE) {
+    Serial.println(message);
+  }
+}
+
+void debug_println(float value) {
+  if (DEBUG_MODE) {
+    Serial.println(value);
+  }
+}
+
+void debug_println(int value) {
+  if (DEBUG_MODE) {
+    Serial.println(value);
+  }
+}
+
 #define PIN_SERVO_A 7
 #define PIN_SERVO_B 8
 #define PIN_SERVO_C 9
@@ -83,12 +123,12 @@ bool isMsg = false;
 void moveHead(float move_up, float move_right, float move_left) {
 
   // Debug output - print received values
-  Serial.print("HEAD DEBUG - Received: HF:");
-  Serial.print(move_up);
-  Serial.print(" HX:");
-  Serial.print(move_right);
-  Serial.print(" HY:");
-  Serial.println(move_left);
+  debug_print("HEAD DEBUG - Received: HF:");
+  debug_print(move_up);
+  debug_print(" HX:");
+  debug_print(move_right);
+  debug_print(" HY:");
+  debug_println(move_left);
 
   //valori angoli iniziali
   a_0 = a_min + theta45;
@@ -106,13 +146,13 @@ void moveHead(float move_up, float move_right, float move_left) {
   }else {
     k = 0;
     // Debug output when the value is not recognized
-    Serial.print("HF value not recognized: ");
-    Serial.println(move_up);
+    debug_print("HF value not recognized: ");
+    debug_println(move_up);
   }
 
   // Debug output - print k value
-  Serial.print("HEAD DEBUG - k value (vertical): ");
-  Serial.println(k);
+  debug_print("HEAD DEBUG - k value (vertical): ");
+  debug_println(k);
 
   int slope = theta45 + abs(k);
 
@@ -315,16 +355,16 @@ void serial_loop() {
   // Se almeno un messaggio è stato ricevuto
   if (isMsg) {
     // Print received command array for debugging
-    Serial.print("Commands received: HF:");
-    Serial.print(lastSpeedCommand[0]);
-    Serial.print(" HX:");
-    Serial.print(lastSpeedCommand[1]);
-    Serial.print(" HY:");
-    Serial.print(lastSpeedCommand[2]);
-    Serial.print(" BF:");
-    Serial.print(lastSpeedCommand[3]);
-    Serial.print(" BB:");
-    Serial.println(lastSpeedCommand[4]);
+    debug_print("Commands received: HF:");
+    debug_print(lastSpeedCommand[0]);
+    debug_print(" HX:");
+    debug_print(lastSpeedCommand[1]);
+    debug_print(" HY:");
+    debug_print(lastSpeedCommand[2]);
+    debug_print(" BF:");
+    debug_print(lastSpeedCommand[3]);
+    debug_print(" BB:");
+    debug_println(lastSpeedCommand[4]);
 
     // Controlliamo se moveHeadBase è attivo
     bool moveHeadBaseActive = (lastSpeedCommand[3] != 0 || lastSpeedCommand[4] != 0);
@@ -335,19 +375,19 @@ void serial_loop() {
 
     // Print which command path we're taking
     if (circularMotionActive) {
-      Serial.println("Executing: Circular Motion");
+      debug_println("Executing: Circular Motion");
       moveHeadCircular();
     }
     else if (moveHeadBaseActive) {
-      Serial.println("Executing: Head Base Motion");
+      debug_println("Executing: Head Base Motion");
       moveHeadBase(lastSpeedCommand[3], lastSpeedCommand[4]);
     }
     else if (moveHeadActive) {
-      Serial.println("Executing: Direct Head Control");
+      debug_println("Executing: Direct Head Control");
       moveHead(lastSpeedCommand[0], lastSpeedCommand[1], lastSpeedCommand[2]);
     }
     else {
-      Serial.println("Executing: Reset to Neutral");
+      debug_println("Executing: Reset to Neutral");
       moveHeadBase(0, 0);  // Reset to neutral position
     }
   }
@@ -380,10 +420,10 @@ void setup() {
   servoB.writeMicroseconds(b_min + theta45);
   servoC.writeMicroseconds(c_min + theta45);
 
-  Serial.println("Arduino HEAD setup started");
+  debug_println("Arduino HEAD setup started");
 
   // Invia un messaggio quando il setup è completo
-  Serial.println("Setup HEAD Complete");
+  debug_println("Setup HEAD Complete");
 }
 
 void loop() {

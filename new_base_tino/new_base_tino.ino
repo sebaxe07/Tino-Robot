@@ -17,7 +17,7 @@
 
 // Define watchdog timeout
 #define MAX_WATCHDOG_ELAPSED_TIME 100000
-#define DEBUG false // Disable debug output for production
+#define DEBUG true // Disable debug output for production
 
 // PID constants
 float Kp = 7.3;

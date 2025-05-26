@@ -9,6 +9,9 @@ class RobotControllerNode(Node):
     def __init__(self):
         super().__init__('robot_controller_node')
         
+        # Declare parameters
+        self.declare_parameter('skeleton_publish_rate_hz', 10.0)  # Default 10Hz
+        
         # Publishers for each robot component
         self.base_pub = self.create_publisher(Twist, 'base_cmd_vel', 10)
         self.head_pub = self.create_publisher(Twist, 'head_cmd', 10)
@@ -83,7 +86,15 @@ class RobotControllerNode(Node):
         # Create timer for controller update
         self.timer = self.create_timer(0.1, self.control_loop)
         
-        self.get_logger().info('Robot controller node initialized with localization, audio, and human skeleton tracking')
+        # Set up skeleton publishing rate from parameter
+        rate_hz = self.get_parameter('skeleton_publish_rate_hz').value
+        if rate_hz <= 0:
+            self.get_logger().warn(f"Invalid skeleton_publish_rate_hz parameter: {rate_hz}. Using default of 10Hz.")
+            rate_hz = 10.0
+        self.skeleton_publish_rate = 1.0 / rate_hz
+        self.skeleton_timer = self.create_timer(self.skeleton_publish_rate, self.publish_skeleton_data)
+        
+        self.get_logger().info(f'Robot controller node initialized with localization, audio, and human skeleton tracking (skeleton publish rate: {1.0/self.skeleton_publish_rate:.1f}Hz)')
         
     def pose_callback(self, msg):
         """Process incoming localization pose data"""
@@ -146,18 +157,26 @@ class RobotControllerNode(Node):
     def human_skeleton_callback(self, msg):
         """Process incoming human skeleton visualization data"""
         self.human_skeleton = msg
-        
-        # Forward to VR interface
-        self.human_skeleton_pub.publish(msg)
-        self.get_logger().debug('Forwarded human skeleton visualization to VR')
+        # Store latest data but don't publish immediately
+        self.get_logger().debug('Received new human skeleton visualization data')
     
     def human_skeleton_poses_callback(self, msg):
         """Process incoming human skeleton joint poses"""
         self.human_skeleton_poses = msg
+        # Store latest data but don't publish immediately
+        self.get_logger().debug(f'Received new human skeleton poses data: {len(msg.poses)} joints')
         
-        # Forward to VR interface
-        self.human_skeleton_poses_pub.publish(msg)
-        self.get_logger().debug(f'Forwarded human skeleton poses to VR: {len(msg.poses)} joints')
+    def publish_skeleton_data(self):
+        """Publish the latest skeleton data at the controlled rate"""
+        # Publish skeleton visualization if available
+        if self.human_skeleton is not None:
+            self.human_skeleton_pub.publish(self.human_skeleton)
+            self.get_logger().debug('Published human skeleton visualization to VR at controlled rate')
+            
+        # Publish skeleton poses if available
+        if self.human_skeleton_poses is not None:
+            self.human_skeleton_poses_pub.publish(self.human_skeleton_poses)
+            self.get_logger().debug(f'Published human skeleton poses to VR at controlled rate: {len(self.human_skeleton_poses.poses)} joints')
 
     def control_loop(self):
         """Main control loop that processes localization and sends commands"""
@@ -170,6 +189,29 @@ class RobotControllerNode(Node):
         # to control the robot's movement based on the human's location
         
         # For now, we're just forwarding the data between systems
+
+    def set_skeleton_publish_rate(self, rate_hz):
+        """
+        Set the rate for skeleton data publishing
+        
+        Args:
+            rate_hz (float): The publishing rate in Hz
+        """
+        if rate_hz <= 0:
+            self.get_logger().error(f"Invalid publishing rate: {rate_hz}Hz. Must be positive.")
+            return False
+            
+        # Create a new timer with the updated rate
+        self.skeleton_publish_rate = 1.0 / rate_hz
+        
+        # Destroy existing timer if present
+        if hasattr(self, 'skeleton_timer') and self.skeleton_timer is not None:
+            self.skeleton_timer.cancel()
+            
+        # Create new timer with updated rate
+        self.skeleton_timer = self.create_timer(self.skeleton_publish_rate, self.publish_skeleton_data)
+        self.get_logger().info(f"Updated skeleton publishing rate to {rate_hz:.1f}Hz")
+        return True
 
 def main(args=None):
     rclpy.init(args=args)

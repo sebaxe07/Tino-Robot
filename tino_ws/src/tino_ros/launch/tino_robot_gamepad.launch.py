@@ -47,13 +47,13 @@ def generate_launch_description():
             output='screen'
         ),
         
-        # # Start the gamepad node
-        # Node(
-        #     package='tino_ros',
-        #     executable='gamepad_node',
-        #     name='gamepad_node',
-        #     output='screen'
-        # ),
+        # Start the gamepad node
+        Node(
+            package='tino_ros',
+            executable='gamepad_node',
+            name='gamepad_node',
+            output='screen'
+        ),
 
         # Start the VR interface node
         Node(

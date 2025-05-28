@@ -462,3 +462,51 @@ For developers integrating with the Unity VR system, here are the message struct
        uint32 data_offset
      int16[] data    # Audio samples (16-bit PCM)
    ```
+
+## System Scripts
+
+Several utility scripts are provided to help manage the robot's operation:
+
+### Building and Setup
+
+- **build_workspace.sh** - Builds the ROS2 workspace using colcon
+  ```bash
+  ./build_workspace.sh
+  ```
+
+### Running the Robot
+
+- **start_tino_with_rtab.sh** - Launches the Tino robot with RTAB-Map localization and gamepad control in a tmux session
+  ```bash
+  ./start_tino_with_rtab.sh
+  ```
+  This script creates a horizontally split tmux session with RTAB-Map on the left side and gamepad control on the right.
+
+- **start_tino_with_rtab_no_gamepad.sh** - Launches the Tino robot with RTAB-Map localization and basic robot control (without gamepad) in a tmux session
+  ```bash
+  ./start_tino_with_rtab_no_gamepad.sh
+  ```
+  This script creates a horizontally split tmux session with RTAB-Map on the left side and basic robot control on the right.
+
+### Stopping the Robot
+
+- **kill_tino_tmux.sh** - Kills the Tino robot tmux session
+  ```bash
+  ./kill_tino_tmux.sh
+  ```
+  This script safely terminates any running tmux sessions for the robot.
+
+### Other Utility Scripts
+
+- **run_rtabmap.sh** - A wrapper script to run rtabmap with proper environment configuration
+- **setup_arduino_symlinks.sh** - Sets up symbolic links for Arduino communication
+- **setup_audio.sh** - Configures audio settings for the robot
+- **upload_head.sh** - Uploads firmware to the head Arduino
+- **upload_new_base.sh** - Uploads firmware to the base Arduino
+
+### TMux Session Management
+
+To detach from a tmux session without stopping it, press `Ctrl+B` then `D`.
+To re-attach to a running session later:
+- For the standard configuration: `tmux attach-session -t tino`
+- For the no-gamepad configuration: `tmux attach-session -t tino_basic`

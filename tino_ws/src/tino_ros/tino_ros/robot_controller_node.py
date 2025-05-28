@@ -116,10 +116,10 @@ class RobotControllerNode(Node):
         self.pose_count += 1
         pos = msg.pose.pose.position
         ori = msg.pose.pose.orientation
-        # self.get_logger().info(
-        #     f'Pose update: Position ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f}), '
-        #     f'Orientation ({ori.x:.2f}, {ori.y:.2f}, {ori.z:.2f}, {ori.w:.2f})'
-        # )
+        self.get_logger().info(
+            f'Pose update: Position ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f}), '
+            f'Orientation ({ori.x:.2f}, {ori.y:.2f}, {ori.z:.2f}, {ori.w:.2f})'
+        )
 
         self.pose_pub.publish(msg)
     

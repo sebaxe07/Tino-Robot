@@ -223,21 +223,45 @@ class RobotControllerNode(Node):
             # Check if the USB audio device is the default
             self.get_logger().info('Checking audio devices on startup')
             
-            # Run a simple check for USB audio devices
-            result = subprocess.run(['aplay', '-l'], capture_output=True, text=True)
-            usb_audio = 'USB Audio Device' in result.stdout
-            
-            if usb_audio:
-                self.get_logger().info('USB Audio Device detected')
+            # Set a short timeout for all audio commands to prevent hanging
+            try:
+                # Run a simple check for USB audio devices with timeout
+                result = subprocess.run(['aplay', '-l'], capture_output=True, text=True, timeout=3)
+                usb_audio = 'USB Audio Device' in result.stdout
                 
-                # Check PulseAudio status
-                pulse_result = subprocess.run(['pactl', 'info'], capture_output=True, text=True)
-                if 'Failed to connect' in pulse_result.stderr:
-                    self.get_logger().warn('PulseAudio is not running, attempting to fix')
-                    subprocess.run(['/home/orinano/Tino-Robot/setup_audio.sh'], shell=True)
-            else:
-                self.get_logger().warn('USB Audio device not found or not default. Audio features may not work correctly.')
-                self.get_logger().warn('Consider running setup_audio.sh script')
+                self.get_logger().debug(f"Audio device check result: {'USB device found' if usb_audio else 'No USB audio found'}")
+                
+                if usb_audio:
+                    self.get_logger().info('USB Audio Device detected')
+                    
+                    # Check PulseAudio status with timeout
+                    try:
+                        pulse_result = subprocess.run(['pactl', 'info'], capture_output=True, text=True, timeout=2)
+                        if pulse_result.returncode != 0 or (hasattr(pulse_result, 'stderr') and 'Failed to connect' in pulse_result.stderr):
+                            self.get_logger().warn('PulseAudio is not running or has issues, attempting to fix in background')
+                            # Run the audio setup script in background to avoid blocking
+                            subprocess.Popen(['/home/orinano/Tino-Robot/setup_audio.sh'], 
+                                            shell=True, 
+                                            start_new_session=True)
+                    except subprocess.TimeoutExpired:
+                        self.get_logger().warn('PulseAudio check timed out, running setup script in background')
+                        subprocess.Popen(['/home/orinano/Tino-Robot/setup_audio.sh'], 
+                                        shell=True, 
+                                        start_new_session=True)
+                else:
+                    self.get_logger().warn('USB Audio device not found or not default. Audio features may not work correctly.')
+                    self.get_logger().warn('Running setup_audio.sh script in background')
+                    # Run in background to avoid blocking
+                    subprocess.Popen(['/home/orinano/Tino-Robot/setup_audio.sh'], 
+                                    shell=True, 
+                                    start_new_session=True)
+            except subprocess.TimeoutExpired:
+                self.get_logger().error('Audio device check timed out')
+                self.get_logger().warn('Running setup_audio.sh script in background to fix audio')
+                # Run in background to avoid blocking
+                subprocess.Popen(['/home/orinano/Tino-Robot/setup_audio.sh'], 
+                                shell=True, 
+                                start_new_session=True)
         except Exception as e:
             self.get_logger().error(f'Error checking audio setup: {str(e)}')
             self.get_logger().warn('Audio features may not work correctly')

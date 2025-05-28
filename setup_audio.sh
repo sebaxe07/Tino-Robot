@@ -119,12 +119,20 @@ else
     exit 1
 fi
 
-# Test audio output capability
-echo "Testing audio output with a short beep..."
-if command -v speaker-test &> /dev/null; then
-    speaker-test -t sine -f 1000 -l 1 -P 10 -D default &
-    sleep 0.5
-    pkill -9 speaker-test
+# Test audio output capability with a pleasant chime
+echo "Testing audio output with a pleasant chime sound..."
+if [ -f "/home/orinano/Tino-Robot/assets/chime.wav" ]; then
+    aplay -D default "/home/orinano/Tino-Robot/assets/chime.wav" &
+    sleep 1
+    pkill -9 aplay 2>/dev/null || true
+    echo "✓ Chime played successfully!"
+else
+    echo "Warning: Chime sound file not found. Using fallback test tone."
+    if command -v speaker-test &> /dev/null; then
+        speaker-test -t sine -f 1000 -l 1 -P 10 -D default &
+        sleep 0.5
+        pkill -9 speaker-test 2>/dev/null || true
+    fi
 fi
 
 echo "===== Audio Setup Results ====="

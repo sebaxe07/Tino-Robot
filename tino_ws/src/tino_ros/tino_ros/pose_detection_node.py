@@ -2,6 +2,7 @@
 
 import rclpy
 from rclpy.node import Node
+import rclpy.logging
 import cv2
 import numpy as np
 from cv_bridge import CvBridge
@@ -11,12 +12,29 @@ from geometry_msgs.msg import Point, PoseStamped, Pose, PoseArray
 from std_msgs.msg import ColorRGBA
 from ultralytics import YOLO
 import os
+import logging
 from ament_index_python.packages import get_package_share_directory
 
 class PoseDetectionNode(Node):
     def __init__(self):
         super().__init__('pose_detection_node')
         
+        # Set logging level to reduce verbosity (ERROR, WARN, INFO, DEBUG)
+        # Default to INFO, but can be changed with ROS param
+        self.declare_parameter('log_level', 'INFO')
+        log_level = self.get_parameter('log_level').get_parameter_value().string_value
+        if hasattr(rclpy.logging, log_level):
+            self.get_logger().set_level(getattr(rclpy.logging, log_level))
+        
+        # Configure YOLO model's logging level - suppress the detection logs
+        # Set Ultralytics logger to ERROR level to suppress the detection logs
+        self.declare_parameter('suppress_yolo_logs', True)
+        if self.get_parameter('suppress_yolo_logs').value:
+            logging.getLogger("ultralytics").setLevel(logging.ERROR)
+            # Also silence other related loggers that might be used by YOLO
+            logging.getLogger("yolo").setLevel(logging.ERROR)
+            logging.getLogger("yolov8").setLevel(logging.ERROR)
+            
         # Initialize CV bridge
         self.bridge = CvBridge()
         
@@ -133,6 +151,7 @@ class PoseDetectionNode(Node):
             'left_knee', 'right_knee', 'left_ankle', 'right_ankle'
         ]
         
+        # Keep initialization logs at INFO level
         self.get_logger().info(f'Pose detection node initialized with image topic: {self.image_topic}')
         self.get_logger().info(f'Using camera frame: {self.camera_frame}')
         
@@ -159,8 +178,8 @@ class PoseDetectionNode(Node):
             return
             
         try:
-            # Run YOLO detection
-            results = self.model(self.latest_image, conf=self.confidence_threshold)
+            # Run YOLO detection with verbose=False to reduce log output
+            results = self.model(self.latest_image, conf=self.confidence_threshold, verbose=False)
             
             # Visualize results
             annotated_image = results[0].plot()
@@ -470,7 +489,7 @@ class PoseDetectionNode(Node):
                 if skeleton_poses.poses:
                     self.skeleton_poses_publisher.publish(skeleton_poses)
                     
-                self.get_logger().info(f"Published skeleton with {len(joint_positions_3d)} valid keypoints")
+                self.get_logger().debug(f"Published skeleton with {len(joint_positions_3d)} valid keypoints")
         
         except Exception as e:
             self.get_logger().error(f'Error processing skeleton: {str(e)}')
@@ -505,8 +524,8 @@ class PoseDetectionNode(Node):
             # Publish position
             self.human_position_publisher.publish(pose_msg)
             
-            # Log human position at reasonable intervals
-            self.get_logger().info(f"Human position: x={avg_x:.2f}m, y={avg_y:.2f}m, z={avg_z:.2f}m")
+            # Log human position at debug level to reduce verbosity
+            self.get_logger().debug(f"Human position: x={avg_x:.2f}m, y={avg_y:.2f}m, z={avg_z:.2f}m")
 
 def main(args=None):
     rclpy.init(args=args)

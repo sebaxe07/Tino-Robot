@@ -1,7 +1,9 @@
 import rclpy
 from rclpy.node import Node
+import rclpy.logging
 from geometry_msgs.msg import PoseWithCovarianceStamped, Twist, PoseStamped, PoseArray
 from std_msgs.msg import String, Int16MultiArray
+from std_srvs.srv import Empty
 from visualization_msgs.msg import MarkerArray
 # Import any VR-specific libraries you'll need
 
@@ -9,12 +11,22 @@ class VRInterfaceNode(Node):
     def __init__(self):
         super().__init__('vr_interface_node')
         
+        # Set logging level to reduce verbosity (ERROR, WARN, INFO, DEBUG)
+        # Default to INFO, but can be changed with ROS param
+        self.declare_parameter('log_level', 'INFO')
+        log_level = self.get_parameter('log_level').get_parameter_value().string_value
+        if hasattr(rclpy.logging, log_level):
+            self.get_logger().set_level(getattr(rclpy.logging, log_level))
+        
         # Subscribe to robot pose from controller
         self.pose_sub = self.create_subscription(
             PoseWithCovarianceStamped,
             '/vr_in/robot_pose', 
             self.pose_callback,
             10)
+        
+        # Create a client for the reset odometry service
+        self.reset_odom_client = self.create_client(Empty, '/reset_odom')
             
         # Subscribe to human position data
         self.human_position_sub = self.create_subscription(
@@ -65,10 +77,49 @@ class VRInterfaceNode(Node):
         pass
     
     def pose_callback(self, msg):
-        """Send robot pose to VR system"""
+        """Send robot pose to VR system and check for lost odometry"""
+        # Check for the specific pose values that indicate odometry loss
+        position = msg.pose.pose.position
+        orientation = msg.pose.pose.orientation
+        
+        # Check for the specific values indicating lost odometry
+        if (position.x == 0.0 and position.y == 0.0 and position.z == 0.0 and
+            orientation.x == 1.0 and orientation.y == 0.0 and orientation.z == 0.0 and orientation.w == 0.0):
+            self.get_logger().warn('Detected odometry loss! Attempting to reset odometry...')
+            self.reset_odometry()
+        else:
+            # Only log at debug level for position tracking
+            self.get_logger().debug(
+                f'Robot pose: position({position.x:.2f}, {position.y:.2f}, {position.z:.2f}), '
+                f'orientation({orientation.x:.2f}, {orientation.y:.2f}, {orientation.z:.2f}, {orientation.w:.2f})'
+            )
+        
         # Send the pose data to VR system
         # This would be implemented based on the specific VR system
-        pass
+        
+    def reset_odometry(self):
+        """Call the reset_odom service to reset the odometry"""
+        # Check if service is available
+        if not self.reset_odom_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().error('Reset odometry service not available')
+            return
+            
+        # Create request
+        request = Empty.Request()
+        
+        # Call service
+        future = self.reset_odom_client.call_async(request)
+        
+        # Add callback for when the service call is completed
+        future.add_done_callback(self.reset_odometry_callback)
+    
+    def reset_odometry_callback(self, future):
+        """Callback for reset_odometry service response"""
+        try:
+            future.result()
+            self.get_logger().info('Successfully reset odometry')
+        except Exception as e:
+            self.get_logger().error(f'Service call failed: {str(e)}')
 
     def mic_audio_callback(self, msg):
         """Process audio data from microphone and send to VR system"""
@@ -80,9 +131,9 @@ class VRInterfaceNode(Node):
         """Process human position data and send to VR system"""
         self.human_position = msg
         
-        # Log receipt of human position data
+        # Using debug level instead of info to reduce verbosity
         pos = msg.pose.position
-        self.get_logger().info(
+        self.get_logger().debug(
             f'VR: Human position received: ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f})'
         )
         
@@ -94,8 +145,8 @@ class VRInterfaceNode(Node):
         """Process human skeleton visualization data"""
         self.human_skeleton = msg
         
-        # Log receipt of skeleton data
-        self.get_logger().info(f'VR: Human skeleton visualization received with {len(msg.markers)} markers')
+        # Log at debug level to reduce verbosity
+        self.get_logger().debug(f'VR: Human skeleton visualization received with {len(msg.markers)} markers')
         
         # Send the skeleton visualization data to the VR system
         # This would be implemented based on the specific VR system
@@ -104,8 +155,8 @@ class VRInterfaceNode(Node):
         """Process human skeleton joint poses data"""
         self.human_skeleton_poses = msg
         
-        # Log receipt of skeleton poses data
-        self.get_logger().info(f'VR: Human skeleton poses received with {len(msg.poses)} joints')
+        # Log at debug level to reduce verbosity
+        self.get_logger().debug(f'VR: Human skeleton poses received with {len(msg.poses)} joints')
         
         # This would be implemented based on the specific VR system
     

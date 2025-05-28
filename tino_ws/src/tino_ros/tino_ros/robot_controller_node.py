@@ -10,7 +10,7 @@ class RobotControllerNode(Node):
         super().__init__('robot_controller_node')
         
         # Declare parameters
-        self.declare_parameter('skeleton_publish_rate_hz', 10.0)  # Default 10Hz
+        self.declare_parameter('skeleton_publish_rate_hz', 5.0)  # Default 10Hz
         
         # Publishers for each robot component
         self.base_pub = self.create_publisher(Twist, 'base_cmd_vel', 10)
@@ -116,10 +116,10 @@ class RobotControllerNode(Node):
         self.pose_count += 1
         pos = msg.pose.pose.position
         ori = msg.pose.pose.orientation
-        self.get_logger().info(
-            f'Pose update: Position ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f}), '
-            f'Orientation ({ori.x:.2f}, {ori.y:.2f}, {ori.z:.2f}, {ori.w:.2f})'
-        )
+        # self.get_logger().info(
+        #     f'Pose update: Position ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f}), '
+        #     f'Orientation ({ori.x:.2f}, {ori.y:.2f}, {ori.z:.2f}, {ori.w:.2f})'
+        # )
 
         self.pose_pub.publish(msg)
     
@@ -130,9 +130,9 @@ class RobotControllerNode(Node):
         
         # Log human position information
         pos = msg.pose.position
-        self.get_logger().info(
-            f'Human detected: Position ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f})'
-        )
+        # self.get_logger().info(
+        #     f'Human detected: Position ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f})'
+        # )
         
         # Forward the human position to the VR interface
         self.human_position_pub.publish(msg)

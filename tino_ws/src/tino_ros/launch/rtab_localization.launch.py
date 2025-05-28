@@ -24,7 +24,9 @@ def generate_launch_description():
                  'approx_sync':False,
                  'wait_imu_to_init':True,
                  'localization':True,
-                 'database_path': os.path.expanduser('~/rtabmap.db') 
+                 'database_path': os.path.expanduser('~/rtabmap.db'),
+                 'Mem/IncrementalMemory': "False",   # disable mapping
+                 'Rtabmap/DetectionRate': "3.0"  
 }]
 
     remappings=[('imu', '/imu/data')]
@@ -67,7 +69,9 @@ def generate_launch_description():
         Node(
             package='rtabmap_slam', executable='rtabmap', output='screen',
             parameters=parameters,
-            remappings=remappings),
+            remappings=remappings,
+            arguments=['--set_mode_localization']),
+
 
         # Visualization
         Node(

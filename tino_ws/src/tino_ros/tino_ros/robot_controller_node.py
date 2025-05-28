@@ -4,10 +4,14 @@ from std_msgs.msg import String, Int16MultiArray
 from geometry_msgs.msg import Twist, PoseWithCovarianceStamped, PoseStamped, PoseArray
 from visualization_msgs.msg import MarkerArray
 import numpy as np
+import subprocess  # Add this import for audio setup
 
 class RobotControllerNode(Node):
     def __init__(self):
         super().__init__('robot_controller_node')
+        
+        # Check audio setup on startup
+        self._check_audio_setup()
         
         # Declare parameters
         self.declare_parameter('skeleton_publish_rate_hz', 5.0)  # Default 10Hz
@@ -212,6 +216,31 @@ class RobotControllerNode(Node):
         self.skeleton_timer = self.create_timer(self.skeleton_publish_rate, self.publish_skeleton_data)
         self.get_logger().info(f"Updated skeleton publishing rate to {rate_hz:.1f}Hz")
         return True
+
+    def _check_audio_setup(self):
+        """Check if audio devices are properly set up, and run setup script if needed"""
+        try:
+            # Check if the USB audio device is the default
+            self.get_logger().info('Checking audio devices on startup')
+            
+            # Run a simple check for USB audio devices
+            result = subprocess.run(['aplay', '-l'], capture_output=True, text=True)
+            usb_audio = 'USB Audio Device' in result.stdout
+            
+            if usb_audio:
+                self.get_logger().info('USB Audio Device detected')
+                
+                # Check PulseAudio status
+                pulse_result = subprocess.run(['pactl', 'info'], capture_output=True, text=True)
+                if 'Failed to connect' in pulse_result.stderr:
+                    self.get_logger().warn('PulseAudio is not running, attempting to fix')
+                    subprocess.run(['/home/orinano/Tino-Robot/setup_audio.sh'], shell=True)
+            else:
+                self.get_logger().warn('USB Audio device not found or not default. Audio features may not work correctly.')
+                self.get_logger().warn('Consider running setup_audio.sh script')
+        except Exception as e:
+            self.get_logger().error(f'Error checking audio setup: {str(e)}')
+            self.get_logger().warn('Audio features may not work correctly')
 
 def main(args=None):
     rclpy.init(args=args)

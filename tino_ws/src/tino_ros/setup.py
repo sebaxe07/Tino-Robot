@@ -32,6 +32,7 @@ setup(
             'pose_detection = tino_ros.pose_detection_node:main',
             'audio_node = tino_ros.audio_node:main',
             'audio_loopback = tino_ros.audio_loopback:main',
+            'audio_test_node = tino_ros.audio_test_node:main',
             'vr_data_recorder_node = tino_ros.vr_data_recorder_node:main',
             'vr_data_extractor = tino_ros.vr_data_extractor:main',
         ],

@@ -8,6 +8,7 @@ import time
 import math
 import os
 import wave
+import random
 from ament_index_python.packages import get_package_share_directory
 
 class AudioNode(Node):
@@ -182,10 +183,23 @@ class AudioNode(Node):
                         # Calculate volume scaling factor (0.0 to 1.0)
                         volume_scale = self.volume / 255.0
                         
-                        # Calculate stereo balance based on orientation (-1 to 1)
-                        # -1 is full left, 0 is center, 1 is full right
-                        left_vol = volume_scale * (1.0 - max(0.0, self.orientation))
-                        right_vol = volume_scale * (1.0 + min(0.0, self.orientation))
+                        # Enhanced stereo panning with boosted dominant channel 
+                        # Apply non-linear curve to make panning more pronounced
+                        orientation_effect = math.pow(abs(self.orientation), 0.7) * (1.0 if self.orientation >= 0 else -1.0)
+                        
+                        # Calculate stereo balance with enhanced panning effect
+                        # When panning to one side, we'll reduce the opposite channel more aggressively
+                        # while slightly boosting the dominant channel
+                        if orientation_effect >= 0:  # Right side dominant
+                            left_vol = volume_scale * (1.0 - (orientation_effect * 1.2))  # Reduce left more aggressively
+                            right_vol = volume_scale * (1.0 + (orientation_effect * 0.3))  # Slightly boost right
+                        else:  # Left side dominant
+                            left_vol = volume_scale * (1.0 + (abs(orientation_effect) * 0.3))  # Slightly boost left
+                            right_vol = volume_scale * (1.0 - (abs(orientation_effect) * 1.2))  # Reduce right more aggressively
+                            
+                        # Ensure we don't exceed safe volume limits
+                        left_vol = max(0.0, min(1.0, left_vol))
+                        right_vol = max(0.0, min(1.0, right_vol))
                         
                         # Get the chunk of audio to play
                         end_pos = min(position + self.sound_chunk, len(audio_data))
@@ -233,9 +247,27 @@ class AudioNode(Node):
                         # Calculate volume scaling factor (0.0 to 1.0)
                         volume_scale = self.volume / 255.0
                         
-                        # Calculate stereo balance based on orientation (-1 to 1)
-                        left_vol = volume_scale * (1.0 - max(0.0, self.orientation))
-                        right_vol = volume_scale * (1.0 + min(0.0, self.orientation))
+                        # Enhanced stereo panning with boosted dominant channel
+                        # Apply non-linear curve to make panning more pronounced
+                        orientation_effect = math.pow(abs(self.orientation), 0.65) * (1.0 if self.orientation >= 0 else -1.0)
+                        
+                        # Calculate panning intensity for exponential curve (0.0 to 1.0)
+                        pan_intensity = min(1.0, abs(self.orientation) * 1.5)
+                        
+                        # Calculate stereo balance with enhanced panning effect using exponential curve
+                        # When panning to one side, we'll reduce the opposite channel exponentially
+                        # while slightly boosting the dominant channel
+                        if orientation_effect >= 0:  # Right side dominant
+                            # Stronger reduction using quadratic falloff for better separation
+                            left_vol = volume_scale * (1.0 - (orientation_effect * 1.1 + pan_intensity * pan_intensity * 0.5))
+                            right_vol = volume_scale * (1.0 + (orientation_effect * 0.3))  # Slightly boost right
+                        else:  # Left side dominant
+                            right_vol = volume_scale * (1.0 - (abs(orientation_effect) * 1.1 + pan_intensity * pan_intensity * 0.5))
+                            left_vol = volume_scale * (1.0 + (abs(orientation_effect) * 0.3))  # Slightly boost left
+                            
+                        # Ensure we don't exceed safe volume limits
+                        left_vol = max(0.0, min(1.0, left_vol))
+                        right_vol = max(0.0, min(1.0, right_vol))
                         
                         # Generate samples based on selected sound type
                         samples = np.zeros((self.sound_chunk, 2), dtype=np.int16)
@@ -311,164 +343,164 @@ class AudioNode(Node):
                                 self.phase_left += 2 * math.pi * freq / self.sample_rate
                                 if self.phase_left > 2 * math.pi:
                                     self.phase_left -= 2 * math.pi
-                        
-                        # No-Face eerie sound (complex, ethereal, mysterious)
+
                         elif self.sound_type == 'noface':
-                            # Create more complex modulation parameters for No-Face sound
-                            
-                            # Update and use multiple LFOs for complex modulation
                             if not hasattr(self, 'noface_params'):
-                                # Initialize parameters for No-Face sound if not already done
                                 self.noface_params = {
-                                    'lfo1_phase': 0.0,        # Slow modulation for base frequency
-                                    'lfo2_phase': 0.0,        # Medium-speed modulation for timbre
-                                    'lfo3_phase': 0.0,        # Fast modulation for fine detail
-                                    'vocal_phase': 0.0,       # For vocal-like elements
-                                    'vocal_timer': 0.0,       # Timer for occasional vocal sounds
-                                    'vocal_active': False,    # Whether vocal sound is currently active
-                                    'intensity': 0.0,         # Dynamic intensity that changes over time
-                                    'last_time': time.time(), # For time-based variations
-                                    'chord_idx': 0,           # Current position in chord progression
-                                    'chord_timer': 0.0        # Timer for chord changes
+                                    'breath_phase': 0.0,
+                                    'breath_cycle': 0,
+                                    'breath_shape': 0,
+                                    'breath_filter': 0.0,
+                                    'breath_noise': 0.0,
+                                    'last_time': time.time(),
+                                    'breath_state': 'inhale',  # 'inhale' or 'exhale'
+                                    'breath_duration': 3.0,     # Base duration in seconds
+                                    'breath_volume': 0.65       # Slightly reduced from 0.7 to prevent clipping
                                 }
-                            
-                            # Update time-based parameters
+                                # Pre-calculated values
+                                self.breath_waveform = np.array([math.sin(x * math.pi / 180) for x in range(0, 181)])
+                                self.filter_coeff = 0.92
+                                # Pre-calculated tone gains to avoid runtime multiplication
+                                self.tone_gains = [0.65, 0.45, 0.25]  # Reduced slightly from initial boost
+
+                            params = self.noface_params
                             current_time = time.time()
-                            time_delta = current_time - self.noface_params['last_time']
-                            self.noface_params['last_time'] = current_time
+                            dt = current_time - params['last_time']
+                            params['last_time'] = current_time
+
+                            # Calculate volume scaling factor (0.0 to 1.0)
+                            volume_scale = self.volume / 255.0
                             
-                            # Update LFO phases
-                            self.noface_params['lfo1_phase'] += 2 * math.pi * 0.05 * time_delta  # Very slow LFO (0.05 Hz)
-                            self.noface_params['lfo2_phase'] += 2 * math.pi * 0.2 * time_delta   # Slow LFO (0.2 Hz)
-                            self.noface_params['lfo3_phase'] += 2 * math.pi * 0.7 * time_delta   # Medium LFO (0.7 Hz)
+                            # Dramatically enhanced stereo panning with extreme channel separation
+                            # Use a more aggressive non-linear curve specifically for noface audio
+                            orientation_effect = math.pow(abs(self.orientation), 0.5) * (1.0 if self.orientation >= 0 else -1.0)
                             
-                            # Wrap phases
-                            for key in ['lfo1_phase', 'lfo2_phase', 'lfo3_phase', 'vocal_phase']:
-                                if self.noface_params[key] > 2 * math.pi:
-                                    self.noface_params[key] -= 2 * math.pi
+                            # Apply extreme panning effect with dramatic channel attenuation
+                            if orientation_effect >= 0:  # Right side dominant
+                                # Strong left channel reduction based on orientation
+                                left_vol = volume_scale * (1.0 - (min(0.95, orientation_effect * 2.0)))
+                                # Enhanced right channel boost
+                                right_vol = volume_scale * (1.0 + (orientation_effect * 0.5))
+                            else:  # Left side dominant
+                                # Enhanced left channel boost
+                                left_vol = volume_scale * (1.0 + (abs(orientation_effect) * 0.5))
+                                # Strong right channel reduction based on orientation
+                                right_vol = volume_scale * (1.0 - (min(0.95, abs(orientation_effect) * 2.0)))
+                                
+                            # Ensure we don't exceed safe volume limits
+                            left_vol = max(0.05, min(1.0, left_vol))  # Keep minimal volume to prevent complete silence
+                            right_vol = max(0.05, min(1.0, right_vol))
+
+                            # Breathing state machine (unchanged)
+                            breath_progress = params['breath_phase'] / (2 * math.pi)
                             
-                            # Update intensity parameter - slowly varies between 0.4 and 1.0
-                            self.noface_params['intensity'] = 0.7 + 0.3 * math.sin(self.noface_params['lfo1_phase'])
+                            if params['breath_state'] == 'inhale' and breath_progress > 0.5:
+                                params['breath_state'] = 'exhale'
+                                params['breath_duration'] = 2.5 + random.random() * 1.5
+                            elif params['breath_state'] == 'exhale' and breath_progress > 1.0:
+                                params['breath_state'] = 'inhale'
+                                params['breath_volume'] = 0.55 + random.random() * 0.2  # Slightly reduced variation
+                                params['breath_phase'] = 0.0
+                                params['breath_cycle'] += 1
+
+                            # Update breath phase
+                            breath_speed = (2 * math.pi) / (params['breath_duration'] * self.sample_rate / self.sound_chunk)
+                            params['breath_phase'] += breath_speed
+
+                            # Generate breath shape
+                            breath_pos = min(180, int((params['breath_phase'] % (2 * math.pi)) / (2 * math.pi) * 180))
+                            breath_shape = self.breath_waveform[breath_pos]
+
+                            # Base tone components
+                            tone1_phase = (self.phase_left * 110 / 60) % (2 * math.pi)
+                            tone2_phase = (self.phase_right * 146.83 / 60.1) % (2 * math.pi)
+                            tone3_phase = (self.phase_left * 73.42 / 60) % (2 * math.pi)
                             
-                            # Update vocal timer and state (vocal-like sounds occur rarely)
-                            self.noface_params['vocal_timer'] += time_delta
-                            vocal_interval = 8.0 + 4.0 * math.sin(self.noface_params['lfo1_phase'])  # 4-12 seconds between vocalizations
-                            
-                            # Randomly trigger vocal sounds
-                            if not self.noface_params['vocal_active'] and self.noface_params['vocal_timer'] > vocal_interval:
-                                if np.random.random() < 0.7:  # 70% chance when timer expires
-                                    self.noface_params['vocal_active'] = True
-                                    self.noface_params['vocal_duration'] = 1.0 + 1.0 * np.random.random()  # 1-2 seconds
-                            
-                            # Turn off vocal sound after duration
-                            if self.noface_params['vocal_active'] and self.noface_params['vocal_timer'] > vocal_interval + self.noface_params['vocal_duration']:
-                                self.noface_params['vocal_active'] = False
-                                self.noface_params['vocal_timer'] = 0  # Reset timer
-                                self.noface_params['vocal_phase'] = 0  # Reset phase
-                            
-                            # Update chord progression timer
-                            self.noface_params['chord_timer'] += time_delta
-                            if self.noface_params['chord_timer'] > 10.0:  # Change chord every 10 seconds
-                                self.noface_params['chord_idx'] = (self.noface_params['chord_idx'] + 1) % 4
-                                self.noface_params['chord_timer'] = 0
-                            
-                            # Define chord progression for more interesting harmony
-                            # Using frequencies that create an eerie, mysterious feel
-                            chord_progressions = [
-                                [55.0, 82.5, 110.0, 164.81],  # A1, E2, A2, E3 (minor feeling)
-                                [58.27, 87.31, 116.54, 174.61],  # Bb1, F2, Bb2, F3 (shifting up)
-                                [55.0, 69.3, 110.0, 138.6],  # A1, C#2, A2, C#3 (diminished feel)
-                                [49.0, 73.42, 98.0, 146.83],  # G1, D2, G2, D3 (resolution)
-                            ]
-                            
-                            # Get current chord
-                            current_chord = chord_progressions[self.noface_params['chord_idx']]
-                            
-                            # Calculate modulation values
-                            mod1 = math.sin(self.noface_params['lfo1_phase'])  # -1 to 1, very slow
-                            mod2 = math.sin(self.noface_params['lfo2_phase'])  # -1 to 1, slow
-                            mod3 = math.sin(self.noface_params['lfo3_phase'])  # -1 to 1, medium
-                            
-                            # Initialize noise filter for smoother noise (if not already done)
-                            if not hasattr(self, 'filtered_noise'):
-                                self.filtered_noise = 0.0
-                            
-                            # Generate the audio samples
+                            # Generate samples with clipping protection
                             for i in range(self.sound_chunk):
-                                # Use multiple frequencies based on current chord for eerie effect
-                                # Base tone uses first note of chord - increase the prominence
-                                base_freq = current_chord[0] * (1.0 + 0.005 * mod1)  # Reduced detuning (from 0.01)
-                                base_tone = math.sin(self.phase_left) * 0.4  # Increased from 0.3
+                                # Base tones with pre-calculated gains
+                                base_tone = (self.tone_gains[0] * math.sin(tone1_phase) + 
+                                            self.tone_gains[1] * math.sin(tone2_phase) +
+                                            self.tone_gains[2] * math.sin(tone3_phase))
                                 
-                                # Second tone uses 2nd note of chord
-                                second_freq = current_chord[1] * (1.0 + 0.003 * mod2)  # Reduced detuning (from 0.005)
-                                second_tone = math.sin(self.phase_right * (second_freq/base_freq)) * 0.25
+                                # Filtered breath noise (slightly reduced)
+                                raw_noise = random.uniform(-1, 1)
+                                params['breath_noise'] = (self.filter_coeff * params['breath_noise'] + 
+                                                        (1 - self.filter_coeff) * raw_noise)
+                                noise = params['breath_noise'] * (0.07 + 0.1 * breath_shape)  # Further reduced
                                 
-                                # Third tone uses 3rd note of chord - slightly reduce to clean up the sound
-                                third_freq = current_chord[2] * (1.0 + 0.004 * mod3)  # Reduced detuning (from 0.008)
-                                third_tone = math.sin((self.phase_left + self.phase_right) * 0.5 * (third_freq/base_freq)) * 0.18  # Reduced from 0.2
+                                # Apply breath volume envelope with soft limit
+                                volume_envelope = min(1.0, params['breath_volume'] * (0.75 + 0.25 * breath_shape))
                                 
-                                # Add slight detuning to create dissonance using 4th note - reduce for less noise
-                                fourth_freq = current_chord[3] * (1.0 + 0.006 * mod1 * mod2)  # Reduced detuning (from 0.012)
-                                fourth_tone = math.sin(self.phase_right * (fourth_freq/base_freq)) * 0.12  # Reduced from 0.15
+                                # Nearly eliminate internal panning to let global panning dominate completely
+                                internal_pan = 0.03 * math.sin(params['breath_phase'] * 0.5)  # Greatly reduced internal panning
                                 
-                                # Add subtle noise with reduced amount based on intensity
-                                noise_amount = 0.01 + 0.02 * self.noface_params['intensity']  # Reduced from 0.03+0.04
-                                raw_noise = np.random.uniform(-noise_amount, noise_amount)
+                                # Calculate dramatically enhanced gain for each channel
+                                # Base gains from volume envelope with enhanced stereo separation
+                                base_gain = volume_envelope * 0.90  # Further reduction to prevent clipping with boosted channels
                                 
-                                # Apply a simple low-pass filter to the noise (exponential smoothing)
-                                alpha = 0.1  # Lower value = smoother noise (0.0-1.0)
-                                self.filtered_noise = alpha * raw_noise + (1 - alpha) * self.filtered_noise
-                                noise = self.filtered_noise
+                                # Apply minimal breathing modulation and maximized global volume/orientation
+                                # Start with basic gains
+                                final_left_gain = base_gain * (1.0 - internal_pan * 0.05) * left_vol  # Minimal internal pan effect
+                                final_right_gain = base_gain * (1.0 + internal_pan * 0.05) * right_vol
                                 
-                                # Add occasional vocal-like sound
-                                vocal_sound = 0
-                                if self.noface_params['vocal_active']:
-                                    # Update vocal phase
-                                    vocal_freq = 110.0 * (1.0 + 0.2 * mod2) * (1.5 + mod1)  # Varies between 110-330 Hz
-                                    self.noface_params['vocal_phase'] += 2 * math.pi * vocal_freq / self.sample_rate
+                                # Calculate extreme orientation intensity with higher scaling factor
+                                orientation_intensity = min(1.0, abs(self.orientation) * 2.5)  # Increased from 1.5 to 2.5
+                                
+                                # Apply cubic falloff for dramatically more pronounced panning effect
+                                if self.orientation > 0.0:  # Right side dominant
+                                    # Create a "hole" in the left channel for strong right panning
+                                    # Cubic falloff for extreme separation
+                                    left_attenuation = orientation_intensity * orientation_intensity * orientation_intensity
+                                    final_left_gain *= max(0.05, (1.0 - (left_attenuation * 0.95)))  # Almost silent but never complete zero
                                     
-                                    # Create a formant-like sound to simulate vocalizations
-                                    formant1 = math.sin(self.noface_params['vocal_phase']) * 0.5
-                                    formant2 = math.sin(self.noface_params['vocal_phase'] * 2.7) * 0.3
-                                    formant3 = math.sin(self.noface_params['vocal_phase'] * 3.5) * 0.2
+                                    # Significant boost to the dominant side for clear directional effect
+                                    # More boost for moderate values, less for extremes (to avoid distortion)
+                                    right_boost = min(1.8, 1.0 + orientation_intensity * 0.6)
+                                    final_right_gain *= right_boost
+                                else:  # Left side dominant  
+                                    # Create a "hole" in the right channel for strong left panning
+                                    # Cubic falloff for extreme separation
+                                    right_attenuation = orientation_intensity * orientation_intensity * orientation_intensity
+                                    final_right_gain *= max(0.05, (1.0 - (right_attenuation * 0.95)))  # Almost silent but never complete zero
                                     
-                                    # Combine formants with envelope
-                                    vocal_progress = (self.noface_params['vocal_timer'] - vocal_interval) / self.noface_params['vocal_duration']
-                                    vocal_envelope = math.sin(vocal_progress * math.pi) if 0 <= vocal_progress <= 1 else 0
-                                    vocal_sound = (formant1 + formant2 + formant3) * vocal_envelope * 0.7
+                                    # Significant boost to the dominant side for clear directional effect
+                                    left_boost = min(1.8, 1.0 + orientation_intensity * 0.6)
+                                    final_left_gain *= left_boost
                                 
-                                # Add more subtle tremolo effect (amplitude variation)
-                                tremolo = 0.92 + 0.08 * math.sin(8.0 * self.noface_params['lfo3_phase'] + i/self.sound_chunk * 2 * math.pi)
+                                # Mix with soft clipping protection
+                                mixed = base_tone + noise * 0.5
+                                # Soft clipping function (tanh approximation)
+                                if mixed > 0.9:
+                                    mixed = 0.9 + (mixed - 0.9) / (1.0 + abs(mixed - 0.9) * 5.0)
+                                elif mixed < -0.9:
+                                    mixed = -0.9 + (mixed + 0.9) / (1.0 + abs(mixed + 0.9) * 5.0)
                                 
-                                # Combine all elements with dynamic intensity and tremolo
-                                main_sound = (base_tone + second_tone + third_tone + fourth_tone) * tremolo * self.noface_params['intensity']
+                                sample = mixed * 0.95 * 32767.0  # Final scaling with headroom
                                 
-                                # Final mix with vocal sound and noise
-                                sample = (main_sound + vocal_sound + noise) * 32767.0
+                                samples[i, 0] = int(sample * final_left_gain)
+                                samples[i, 1] = int(sample * final_right_gain)
                                 
-                                # Apply volume to left and right channels with slight variations for stereo field
-                                stereo_spread = 0.1 * math.sin(self.noface_params['lfo2_phase'] + i/self.sound_chunk * 0.5)
-                                left_factor = left_vol * (1.0 - stereo_spread)
-                                right_factor = right_vol * (1.0 + stereo_spread)
+                                # Update phases with orientation-based frequency shift
+                                # This creates a slight frequency difference between ears when panning
+                                # which enhances the stereo image perception
+                                freq_shift = 1.0 + (self.orientation * 0.04)  # Small frequency shift based on orientation
                                 
-                                samples[i, 0] = int(sample * left_factor)
-                                samples[i, 1] = int(sample * right_factor)
-                                
-                                # Slowly modulate phase increment for main tone variation
-                                freq_mod = 1.0 + 0.1 * mod2 + 0.05 * mod3
-                                base_freq_with_mod = base_freq * freq_mod
-                                
-                                # Update phase accumulators for next sample
-                                self.phase_left += 2 * math.pi * base_freq_with_mod / self.sample_rate
-                                self.phase_right += 2 * math.pi * (base_freq_with_mod * 1.002) / self.sample_rate  # Slightly detuned for right channel
-                                
-                                # Wrap phases
-                                if self.phase_left > 2 * math.pi:
-                                    self.phase_left -= 2 * math.pi
-                                if self.phase_right > 2 * math.pi:
-                                    self.phase_right -= 2 * math.pi
-                        
+                                # Apply frequency shift to create stereo widening effect
+                                if self.orientation > 0:
+                                    # When panning right, increase right frequency slightly
+                                    tone1_phase += 2 * math.pi * 110 / self.sample_rate
+                                    tone2_phase += 2 * math.pi * (146.83 * freq_shift) / self.sample_rate
+                                    tone3_phase += 2 * math.pi * 73.42 / self.sample_rate
+                                    self.phase_left += 2 * math.pi * 60.0 / self.sample_rate
+                                    self.phase_right += 2 * math.pi * (60.1 * freq_shift) / self.sample_rate
+                                else:
+                                    # When panning left, increase left frequency slightly
+                                    tone1_phase += 2 * math.pi * (110 * (2.0 - freq_shift)) / self.sample_rate
+                                    tone2_phase += 2 * math.pi * 146.83 / self.sample_rate
+                                    tone3_phase += 2 * math.pi * (73.42 * (2.0 - freq_shift)) / self.sample_rate
+                                    self.phase_left += 2 * math.pi * (60.0 * (2.0 - freq_shift)) / self.sample_rate
+                                    self.phase_right += 2 * math.pi * 60.1 / self.sample_rate
                         # Write samples to output stream
                         output_stream.write(samples.tobytes())
                     

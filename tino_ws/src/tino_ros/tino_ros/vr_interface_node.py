@@ -83,8 +83,7 @@ class VRInterfaceNode(Node):
         orientation = msg.pose.pose.orientation
         
         # Check for the specific values indicating lost odometry
-        if (position.x == 0.0 and position.y == 0.0 and position.z == 0.0 and
-            orientation.x == 1.0 and orientation.y == 0.0 and orientation.z == 0.0 and orientation.w == 0.0):
+        if (orientation.x == 1.0 and orientation.y == 0.0 and orientation.z == 0.0 and orientation.w == 0.0):
             self.get_logger().warn('Detected odometry loss! Attempting to reset odometry...')
             self.reset_odometry()
         else:

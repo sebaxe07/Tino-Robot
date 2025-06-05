@@ -2,7 +2,7 @@ import rclpy
 from rclpy.node import Node
 import rclpy.logging
 from geometry_msgs.msg import PoseWithCovarianceStamped, Twist, PoseStamped, PoseArray
-from std_msgs.msg import String, Int16MultiArray
+from std_msgs.msg import String, Int16MultiArray, Float32MultiArray
 from std_srvs.srv import Empty
 from visualization_msgs.msg import MarkerArray
 # Import any VR-specific libraries you'll need
@@ -56,7 +56,7 @@ class VRInterfaceNode(Node):
             Int16MultiArray, '/vr_in/audio_output', self.mic_audio_callback, 10)
 
         self.vr_audio_pub = self.create_publisher(
-            Int16MultiArray, '/vr_out/audio_input', 10)
+            Float32MultiArray, '/vr_out/audio_input', 10)
         
         
         # Store human position data

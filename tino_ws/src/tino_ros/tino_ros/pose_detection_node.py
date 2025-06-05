@@ -270,7 +270,13 @@ class PoseDetectionNode(Node):
         has_person = False
         human_position = None
         
-        # Process detections
+        # Variables to track the closest person
+        closest_person_idx = -1
+        closest_person_depth = float('inf')
+        closest_person_position = None
+        closest_person_data = None  # Store detection data for closest person
+        
+        # First pass: find the closest person
         for i, detection in enumerate(result.boxes):
             try:
                 # Get bounding box
@@ -295,53 +301,76 @@ class PoseDetectionNode(Node):
                         # Calculate 3D position
                         x_3d, y_3d, z_3d = self.calculate_3d_position(center_x, center_y, depth_value)
                         
-                        # Store human position
-                        human_position = (x_3d, y_3d, z_3d)
-                        
-                        # Create text marker to display the position
-                        marker = Marker()
-                        marker.header.frame_id = self.camera_frame
-                        marker.header.stamp = self.get_clock().now().to_msg()
-                        marker.id = i
-                        marker.type = Marker.TEXT_VIEW_FACING
-                        marker.action = Marker.ADD
-                        
-                        marker.pose.position.x = x_3d
-                        marker.pose.position.y = y_3d
-                        marker.pose.position.z = z_3d
-                        
-                        marker.scale.z = 0.1  # Text size
-                        
-                        marker.color = ColorRGBA(r=1.0, g=0.0, b=0.0, a=1.0)
-                        marker.text = f"{class_name}: {confidence:.2f}, Dist: {z_3d:.2f}m"
-                        
-                        marker_array.markers.append(marker)
-                        
-                        # Add a second marker to visualize the person's position
-                        position_marker = Marker()
-                        position_marker.header.frame_id = self.camera_frame
-                        position_marker.header.stamp = self.get_clock().now().to_msg()
-                        position_marker.id = i + 1000  # Ensure unique ID
-                        position_marker.type = Marker.SPHERE
-                        position_marker.action = Marker.ADD
-                        
-                        position_marker.pose.position.x = x_3d
-                        position_marker.pose.position.y = y_3d
-                        position_marker.pose.position.z = z_3d
-                        
-                        position_marker.scale.x = 0.2
-                        position_marker.scale.y = 0.2
-                        position_marker.scale.z = 0.2
-                        
-                        position_marker.color = ColorRGBA(r=0.0, g=1.0, b=0.0, a=0.8)
-                        
-                        marker_array.markers.append(position_marker)
-                        
-                        # Process keypoints if available (only for the first person detected)
-                        if hasattr(result, 'keypoints') and len(result.keypoints) > 0:
-                            self.process_skeleton(result.keypoints[i], depth_value, human_position)
+                        # Check if this person is closer than the previous closest
+                        if z_3d < closest_person_depth:
+                            closest_person_depth = z_3d
+                            closest_person_idx = i
+                            closest_person_position = (x_3d, y_3d, z_3d)
+                            closest_person_data = {
+                                'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2,
+                                'class_id': class_id, 'confidence': confidence,
+                                'center_x': center_x, 'center_y': center_y,
+                                'depth_value': depth_value,
+                                'x_3d': x_3d, 'y_3d': y_3d, 'z_3d': z_3d
+                            }
             except Exception as e:
-                self.get_logger().error(f'Error creating marker for detection {i}: {e}')
+                self.get_logger().error(f'Error processing detection {i}: {e}')
+        
+        # Second pass: process only the closest person
+        if closest_person_idx >= 0:
+            try:
+                # Extract data for the closest person
+                data = closest_person_data
+                
+                # Create text marker to display the position
+                marker = Marker()
+                marker.header.frame_id = self.camera_frame
+                marker.header.stamp = self.get_clock().now().to_msg()
+                marker.id = closest_person_idx
+                marker.type = Marker.TEXT_VIEW_FACING
+                marker.action = Marker.ADD
+                
+                marker.pose.position.x = data['x_3d']
+                marker.pose.position.y = data['y_3d']
+                marker.pose.position.z = data['z_3d']
+                
+                marker.scale.z = 0.1  # Text size
+                
+                marker.color = ColorRGBA(r=1.0, g=0.0, b=0.0, a=1.0)
+                marker.text = f"person: {data['confidence']:.2f}, Dist: {data['z_3d']:.2f}m"
+                
+                marker_array.markers.append(marker)
+                
+                # Add a second marker to visualize the person's position
+                position_marker = Marker()
+                position_marker.header.frame_id = self.camera_frame
+                position_marker.header.stamp = self.get_clock().now().to_msg()
+                position_marker.id = closest_person_idx + 1000  # Ensure unique ID
+                position_marker.type = Marker.SPHERE
+                position_marker.action = Marker.ADD
+                
+                position_marker.pose.position.x = data['x_3d']
+                position_marker.pose.position.y = data['y_3d']
+                position_marker.pose.position.z = data['z_3d']
+                
+                position_marker.scale.x = 0.2
+                position_marker.scale.y = 0.2
+                position_marker.scale.z = 0.2
+                
+                position_marker.color = ColorRGBA(r=0.0, g=1.0, b=0.0, a=0.8)
+                
+                marker_array.markers.append(position_marker)
+                
+                # Store human position for publishing
+                human_position = closest_person_position
+                
+                # Process keypoints if available (only for the closest person)
+                if hasattr(result, 'keypoints') and len(result.keypoints) > 0:
+                    # Make sure we're processing keypoints for the right detection index
+                    self.process_skeleton(result.keypoints[closest_person_idx], data['depth_value'], human_position)
+                    self.get_logger().debug(f"Processing skeleton for person {closest_person_idx} at depth {data['z_3d']:.2f}m")
+            except Exception as e:
+                self.get_logger().error(f'Error creating marker for closest human: {e}')
                 
         if marker_array.markers:
             self.markers_publisher.publish(marker_array)

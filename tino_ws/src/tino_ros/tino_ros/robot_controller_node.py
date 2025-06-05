@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String, Int16MultiArray
+from std_msgs.msg import String, Int16MultiArray, Float32MultiArray
 from geometry_msgs.msg import Twist, PoseWithCovarianceStamped, PoseStamped, PoseArray
 from visualization_msgs.msg import MarkerArray
 import numpy as np
@@ -69,11 +69,11 @@ class RobotControllerNode(Node):
         self.mic_audio_sub = self.create_subscription(
             Int16MultiArray, '/audio/mic_input', self.mic_audio_callback, 10)
         self.vr_audio_sub = self.create_subscription(
-            Int16MultiArray, '/vr_out/audio_input', self.vr_audio_callback, 10)
+            Float32MultiArray, '/vr_out/audio_input', self.vr_audio_callback, 10)
         self.vr_audio_pub = self.create_publisher(
             Int16MultiArray, '/vr_in/audio_output', 10)
         self.robot_audio_pub = self.create_publisher(
-            Int16MultiArray, '/audio/vr_output', 10)
+            Float32MultiArray, '/audio/vr_output', 10)
         
         # Store the latest pose information
         self.current_pose = None
@@ -120,10 +120,10 @@ class RobotControllerNode(Node):
         self.pose_count += 1
         pos = msg.pose.pose.position
         ori = msg.pose.pose.orientation
-        self.get_logger().info(
-            f'Pose update: Position ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f}), '
-            f'Orientation ({ori.x:.2f}, {ori.y:.2f}, {ori.z:.2f}, {ori.w:.2f})'
-        )
+        # self.get_logger().info(
+        #     f'Pose update: Position ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f}), '
+        #     f'Orientation ({ori.x:.2f}, {ori.y:.2f}, {ori.z:.2f}, {ori.w:.2f})'
+        # )
 
         self.pose_pub.publish(msg)
     

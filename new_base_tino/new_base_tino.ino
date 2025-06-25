@@ -2,11 +2,56 @@
 #include <Encoder.h>
 #include "RaspberryCommunication.h"
 #include "pinout.h"
+#include <avr/wdt.h> // Include watchdog timer
+
+// Forward declarations
+void process_special_command(char* buffer);
+void send_status_update();
+
+// Debug flag - set to true to enable debug prints, false to disable
+#define DEBUG_MODE true
+
+// Debug print helper functions
+void debug_print(const char* message) {
+  if (DEBUG_MODE) {
+    Serial.print(message);
+  }
+}
+
+void debug_print(float value) {
+  if (DEBUG_MODE) {
+    Serial.print(value);
+  }
+}
+
+void debug_print(int value) {
+  if (DEBUG_MODE) {
+    Serial.print(value);
+  }
+}
+
+void debug_println(const char* message) {
+  if (DEBUG_MODE) {
+    Serial.println(message);
+  }
+}
+
+void debug_println(float value) {
+  if (DEBUG_MODE) {
+    Serial.println(value);
+  }
+}
+
+void debug_println(int value) {
+  if (DEBUG_MODE) {
+    Serial.println(value);
+  }
+}
 
 //_________________CYTRON_MOTOR___________________________//
 //Maximum speed wanted
-#define _MAX_SPEED 20       //cm/s
-#define _MAX_ANGULAR 0.6    // rad/s
+#define _MAX_SPEED 40       //cm/s
+#define _MAX_ANGULAR 1.5    // rad/s
 #define wheel_radius 3.0f   //cm
 #define robot_radius 16.5f  //cm
 #define encoder_ppr 1920.0f
@@ -58,6 +103,10 @@ const int encoderUpdateInterval = 500; // Update encoder readings every 500ms
 
 char feedback_msg[100];
 
+// Variables for periodic status updates
+unsigned long lastStatusUpdate = 0;
+const unsigned long STATUS_UPDATE_INTERVAL = 1000; // Send status every 1 second
+
 //_______________________________
 unsigned long phaseStartTimeLinear = 0;  // Timer for linear movement
 unsigned long phaseStartTimeAngular = 0; // Timer for angular movement
@@ -68,22 +117,6 @@ bool angularDirectionPositive = false; // Track the direction of angular movemen
 
 // Note: last_command_time and current_time are now used from RaspberryCommunication.cpp
 
-float convertSpeed(float speed, bool angular) {
-  if (angular) {
-    if (speed > _MAX_ANGULAR)
-      return _MAX_ANGULAR;
-    if (speed < -_MAX_ANGULAR)
-      return -_MAX_ANGULAR;
-    else
-      return speed;
-  }
-  if (speed > _MAX_SPEED)
-    return _MAX_SPEED;
-  if (speed < -_MAX_SPEED)
-    return -_MAX_SPEED;
-  else
-    return speed;
-}
 
 // Get motor speed in rad/s from encoder readings
 void getMotorSpeed(long deltaT, int pos, int prev_pos, int i) {
@@ -112,15 +145,31 @@ int updatePid(double targetValue, double currentValue, int i) {
 
 // Calculate motor speeds for differential drive based on linearY and angular
 void calculateMotorSpeeds(float linearY, float angular) {
-  // Convert from cm/s and rad/s to rad/s for wheels
+  // Simplified approach: always use maximum speeds when movement is commanded
+  
+  // For linear movement, use the maximum speed if any command is present
+  float actualLinearY = 0;
+  if (linearY != 0) {
+    // Use maximum speed with appropriate direction
+    actualLinearY = linearY > 0 ? _MAX_SPEED : -_MAX_SPEED;
+  }
+  
+  // For angular movement, use the maximum angular speed if any command is present
+  float actualAngular = 0;
+  if (angular != 0) {
+    // Use maximum angular speed with appropriate direction
+    actualAngular = angular > 0 ? _MAX_ANGULAR : -_MAX_ANGULAR;
+  }
+  
+  // Now convert to wheel speeds in rad/s
   // For differential drive:
   // INVERTED TURNING: Changed signs of angular component
   // Left wheel speed = (linearY + angular * robot_radius) / wheel_radius
   // Right wheel speed = (linearY - angular * robot_radius) / wheel_radius
   
   // Note: We invert as needed based on motor orientation
-  speed_req[0] = (linearY + angular * robot_radius) / wheel_radius;  // Left wheel (angular sign inverted)
-  speed_req[1] = -(linearY - angular * robot_radius) / wheel_radius; // Right wheel (both signs inverted)
+  speed_req[0] = (actualLinearY + actualAngular * robot_radius) / wheel_radius;  // Left wheel (angular sign inverted)
+  speed_req[1] = -(actualLinearY - actualAngular * robot_radius) / wheel_radius; // Right wheel (both signs inverted)
 }
 
 // Run PID loop to control motor speeds
@@ -270,26 +319,67 @@ unsigned int last_serial_time = millis();
 
 bool isMsg = false;
 
+// Add this to send periodic status updates
+void send_status_update() {
+  unsigned long currentTime = millis();
+  
+  // Check if it's time to send a status update
+  if (currentTime - lastStatusUpdate >= STATUS_UPDATE_INTERVAL) {
+    lastStatusUpdate = currentTime;
+    
+    // Send basic status information
+    sprintf(feedback_msg, "BASE_ALIVE: UPTIME:%lu L_ENC:%ld R_ENC:%ld SPD_L:%d SPD_R:%d", 
+        millis()/1000, rightEncoder.read(), leftEncoder.read(), PWM_val[0], PWM_val[1]);
+    debug_println(feedback_msg);
+  }
+}
+
 // Process special commands like PING
 void process_special_command(char* buffer) {
   if (strstr(buffer, "PING:1") != NULL) {
     // Respond to ping with a status message
     sprintf(feedback_msg, "PONG:1 UPTIME:%lu", millis()/1000);
     Serial.println(feedback_msg);
+    
+    // Also send additional status information
+    sprintf(feedback_msg, "STATUS: L:%ld R:%ld SPD_L:%.2f SPD_R:%.2f", 
+        leftEncoder.read(), rightEncoder.read(), speed_act[0], speed_act[1]);
+    Serial.println(feedback_msg);
   } else if (strstr(buffer, "HB:1") != NULL) {
-    // Respond to heartbeat
-    Serial.println("HB:ACK");
+    // Respond to heartbeat with more info
+    sprintf(feedback_msg, "HB:ACK MOTORS:%.2f,%.2f PWM:%d,%d", 
+        lastSpeedCommand[0], lastSpeedCommand[1], PWM_val[0], PWM_val[1]);
+    Serial.println(feedback_msg);
+  } else if (strstr(buffer, "STATUS") != NULL) {
+    // Respond to status request with detailed information
+    sprintf(feedback_msg, "BASE_STATUS: L_POS:%ld R_POS:%ld L_SPD:%.2f R_SPD:%.2f", 
+        leftEncoder.read(), rightEncoder.read(), speed_act[0], speed_act[1]);
+    Serial.println(feedback_msg);
+    
+    // Second line with PWM and target speeds
+    sprintf(feedback_msg, "TARGET: L_REQ:%.2f R_REQ:%.2f L_PWM:%d R_PWM:%d", 
+        speed_req[0], speed_req[1], PWM_val[0], PWM_val[1]);
+    Serial.println(feedback_msg);
   }
 }
 
 //Set values to motors
 void serial_loop() {
+  static unsigned long lastErrorTime = 0;
+  static int errorCount = 0;
+  
   // a serial loop can only be performed once every MIN_SERIAL_ELAPSED time
   now = millis();
 
   serial_elapsed = now - last_serial_time;
   if (serial_elapsed < MIN_SERIAL_ELAPSED)
     return;
+
+  // Add safety check - if we're getting too many errors, throttle processing
+  if (errorCount > 10 && (millis() - lastErrorTime < 1000)) {
+    delay(100); // Add delay to slow down
+    return;
+  }
 
   // read everything it can from serial
   while (read_key_value_serial() && !isMsg) {
@@ -298,7 +388,31 @@ void serial_loop() {
 
   // if at least a msg was received, use the updated values
   if (isMsg) {
-    updateBaseMovementByTime(lastSpeedCommand[0], lastSpeedCommand[1]);
+    // Print received command values for debugging
+    // debug_print("BASE DEBUG - Received: BF:");
+    // debug_print(lastSpeedCommand[0]);
+    // debug_print(" BB:");
+    // debug_println(lastSpeedCommand[1]);
+    
+    // Validate speed values before using them - add bounds checking
+    if (isnan(lastSpeedCommand[0]) || isnan(lastSpeedCommand[1]) ||
+        isinf(lastSpeedCommand[0]) || isinf(lastSpeedCommand[1])) {
+      debug_println("ERROR: Invalid speed values detected!");
+      lastSpeedCommand[0] = 0;
+      lastSpeedCommand[1] = 0;
+      errorCount++;
+      lastErrorTime = millis();
+    } else {
+      // // Print which command path we're taking
+      // if (lastSpeedCommand[0] != 0 || lastSpeedCommand[1] != 0) {
+      //   debug_println("Executing: Movement Command");
+      //   // Also send info about current encoder positions for debugging
+      //   sprintf(feedback_msg, "POS: L:%ld R:%ld SPD: L:%.2f R:%.2f", 
+      //     leftEncoder.read(), rightEncoder.read(), speed_act[0], speed_act[1]);
+      //   debug_println(feedback_msg);
+      // }
+      updateBaseMovementByTime(lastSpeedCommand[0], lastSpeedCommand[1]);
+    }
     
     canWrite = true;
     last_serial_time = millis();
@@ -310,11 +424,31 @@ void serial_loop() {
 }
 
 void setup() {
-  // Initialize serial communication
+  // Disable watchdog first thing to prevent reset loops
+  wdt_disable();
+  
+  // Start communication with a brief delay to stabilize
   Serial.begin(115200);
-  Serial.flush();
-  delay(200);
-
+  delay(500); // Longer delay for stability
+  Serial.println("=====SYSTEM STARTING=====");
+  
+  // Report reset cause
+  uint8_t resetFlags = MCUSR;
+  MCUSR = 0; // Clear reset flags
+  
+  if (resetFlags & (1<<WDRF)) {
+    Serial.println("WARNING: Reset caused by Watchdog Timer");
+  }
+  if (resetFlags & (1<<BORF)) {
+    Serial.println("WARNING: Reset caused by Brown-out");
+  }
+  if (resetFlags & (1<<EXTRF)) {
+    Serial.println("INFO: Reset caused by external reset button");
+  }
+  if (resetFlags & (1<<PORF)) {
+    Serial.println("INFO: Power-on reset");
+  }
+  
   canWrite = false;
   lastWriteTime = millis();
 
@@ -341,11 +475,34 @@ void setup() {
   }
   lastMilliLoop = millis();
   
-  // Minimal startup messages
-  Serial.println("Setup Complete");
+  // Initialize lastStatusUpdate time
+  lastStatusUpdate = millis();
+  
+  // Better startup messages similar to the head Arduino
+  debug_println("Arduino BASE setup started");
+  debug_println("Setup BASE Complete");
 }
 
 void loop() {
   watchdog_tick();
   serial_loop();
+  send_status_update();
+    
+  // Periodically report memory usage
+  static unsigned long lastMemReport = 0;
+  if (millis() - lastMemReport > 10000) { // Every 10 seconds
+    lastMemReport = millis();
+      
+    // Calculate available memory
+    extern int __heap_start, *__brkval;
+    int freeMemory;
+      
+    if((int)__brkval == 0)
+      freeMemory = ((int)&freeMemory) - ((int)&__heap_start);
+    else
+      freeMemory = ((int)&freeMemory) - ((int)__brkval);
+      
+    debug_print("Available memory: ");
+    debug_println(freeMemory);
+  }
 }

@@ -49,6 +49,14 @@ bool read_key_value_serial() {
     // Copy to buffer with bounds checking
     receivedData.toCharArray(buffer, BUFFER_SIZE);
     
+    // Check for special commands first
+    if (strstr(buffer, "PING:1") != NULL || 
+        strstr(buffer, "HB:1") != NULL || 
+        strstr(buffer, "STATUS") != NULL) {
+      // Process special command
+      process_special_command(buffer);
+    }
+    
     // Parse linear velocity (BF = Base Forward)
     if (is_key(KEY_BF, buffer)) {
       parse_key_value(KEY_BF, &lastSpeedCommand[0], buffer);

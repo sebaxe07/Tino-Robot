@@ -156,7 +156,6 @@ class HardwareInterfaceNode(Node):
         # Limit values to reasonable ranges
         self.bf = max(min(msg.linear.x, 25.0), -25.0)  # Limit max speed
         self.bb = max(min(msg.angular.z, 1.0), -1.0)   # Limit max angular velocity
-
         # Generate command and add to queue
         self.command_queue.put(self.generate_command())
 

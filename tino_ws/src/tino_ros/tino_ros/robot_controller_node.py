@@ -14,7 +14,7 @@ class RobotControllerNode(Node):
         self._check_audio_setup()
         
         # Declare parameters
-        self.declare_parameter('skeleton_publish_rate_hz', 5.0)  # Default 10Hz
+        self.declare_parameter('skeleton_publish_rate_hz', 10.0)  # Default 10Hz
         
         # Publishers for each robot component
         self.base_pub = self.create_publisher(Twist, 'base_cmd_vel', 10)

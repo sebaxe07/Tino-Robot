@@ -50,8 +50,8 @@ void debug_println(int value) {
 
 //_________________CYTRON_MOTOR___________________________//
 //Maximum speed wanted
-#define _MAX_SPEED 40       //cm/s
-#define _MAX_ANGULAR 1.5    // rad/s
+#define _MAX_SPEED 50       //cm/s
+#define _MAX_ANGULAR 1.1    // rad/s
 #define wheel_radius 3.0f   //cm
 #define robot_radius 16.5f  //cm
 #define encoder_ppr 1920.0f

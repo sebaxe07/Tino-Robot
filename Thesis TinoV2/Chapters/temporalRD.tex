@@ -187,7 +187,7 @@
 
 
 Week 18 Mar
-R&D on different techs
+R\&D on different techs
 
 Week 25 Mar
 Task: Work on Orin nano testing cameras ZED 2, and Orb slam 3 with webcam and Realsense T265
@@ -211,7 +211,7 @@ Then I tried to build the Ros version of rtab but this one had not a proper impl
 Then I tied again with the standalone version and this time I was able to make it link with the depthAI, and it worked amaizing, I did some tests with the camera over Tino moving around, this showed that Rtab was working really well creating a map and most importantly it was able to save a map and then relocalize itself in that map.
 Now the next step was how to get the data out of the standalone version, how to get the position and orientation.
 
-After some trial an error managed to install and run it with ros2 using the depthai_ros and the rtabmap_ros, it publishes the localization_pose topic that has all of the importnat information
+After some trial an error managed to install and run it with ros2 using the depthai\_ros and the rtabmap\_ros, it publishes the localization\_pose topic that has all of the importnat information
 
 Managed to load the correct map, I refactored the old Tino source code to work with Ros2, created the respective topics and the needed structure. Created respective launch files for mapping and localization modes
 Added human detection, this system works by subscribing to the same camera topic and run it with yolo11 in tensorRt format. This provides all of the information needed for the human detection getting all of the skeleton pose joints, getting the depth (using the stereo camera info) and position in relation to the robot.
@@ -219,15 +219,17 @@ Added human detection, this system works by subscribing to the same camera topic
 Also by creating this ros version I created a node for handling the VR connection in the future. 
 
 Apr 19
-Major milestone reached: Complete system architecture migration from legacy Raspberry Pi based system to ROS2 based implementation. Restructured the entire workspace by creating tino_ws for ROS2 development and moved all legacy code to legacy_tino folder for preservation.
+Major milestone reached: Complete system architecture migration from legacy Raspberry Pi based system to ROS2 based implementation. Restructured the entire workspace by creating tino\_ws for ROS2 development and moved all legacy code to legacy\_tino folder for preservation.
 
 Implemented the core ROS2 node architecture:
-- gamepad_node.py: Handles Xbox controller input with proper D-input to X-input conversion for Jetson compatibility
-- hardware_interface_node.py: Manages serial communication with all 3 Arduino systems (head, base, leg) using proper device symlinks
-- robot_controller_node.py: Central coordination node that manages all robot behaviors and movement commands
-- vr_interface_node.py: Handles VR system integration and data exchange for future Unity integration
+\begin{itemize}
+\item gamepad\_node.py: Handles Xbox controller input with proper D-input to X-input conversion for Jetson compatibility
+\item hardware\_interface\_node.py: Manages serial communication with all 3 Arduino systems (head, base, leg) using proper device symlinks
+\item robot\_controller\_node.py: Central coordination node that manages all robot behaviors and movement commands
+\item vr\_interface\_node.py: Handles VR system integration and data exchange for future Unity integration
+\end{itemize}
 
-Created launch files for both mapping (rtab_mapping.launch.py) and localization (rtab_localization.launch.py) modes, allowing seamless switching between SLAM creation and navigation modes.
+Created launch files for both mapping (rtab\_mapping.launch.py) and localization (rtab\_localization.launch.py) modes, allowing seamless switching between SLAM creation and navigation modes.
 
 This migration allows for much better modularity, debugging capabilities, and integration with the VR system compared to the monolithic Python scripts from the legacy system.
 
@@ -237,7 +239,7 @@ Next task was adding audion in/out to the system. I was provided with a omnidire
 Apr 23
 Major advancement in human detection capabilities: Implemented pose detection functionality using YOLOv11 with TensorRT optimization. The system now provides real-time human skeleton tracking with 17 key body joints detection, including depth information using the stereo camera data. This allows Tino to not only detect humans but also track their pose and calculate their 3D position relative to the robot.
 
-Added audio handling nodes (audio_node.py and audio_loopback.py) and fully integrated audio functionality into both VR and robot controller systems. The audio system now supports bidirectional communication: capturing audio from the omnidirectional microphone and publishing it to VR, while also receiving audio from VR and playing it through the speakers.
+Added audio handling nodes (audio\_node.py and audio\_loopback.py) and fully integrated audio functionality into both VR and robot controller systems. The audio system now supports bidirectional communication: capturing audio from the omnidirectional microphone and publishing it to VR, while also receiving audio from VR and playing it through the speakers.
 
 Enhanced gamepad handling with improved command processing and error reporting, making the control system more robust and responsive.
 
@@ -281,25 +283,28 @@ We built the T structure using Aluminium profiles, item, this allowed us to have
 One of our main issues where the wheels we started by using plastic wheels that had a rubber neumatic, this worked first but then when tino was built it created an issue
 
 May 8
-Completed major refactor of serial communication and motor control systems for the new differential drive base implementation. Created new_base_tino.ino with enhanced PID controller specifically designed for the differential drive system, replacing the old omnidirectional control logic.
+Completed major refactor of serial communication and motor control systems for the new differential drive base implementation. Created new\_base\_tino.ino with enhanced PID controller specifically designed for the differential drive system, replacing the old omnidirectional control logic.
 
-Updated hardware_interface_node.py with improved serial port configurations, added comprehensive debugging logs, and enhanced command handling to work with the new base architecture. The new system uses proper device symlinks (/dev/ttyBASE, /dev/ttyHEAD, /dev/ttyLEG) to ensure consistent Arduino connections.
+Updated hardware\_interface\_node.py with improved serial port configurations, added comprehensive debugging logs, and enhanced command handling to work with the new base architecture. The new system uses proper device symlinks (/dev/ttyBASE, /dev/ttyHEAD, /dev/ttyLEG) to ensure consistent Arduino connections.
 
-Created upload scripts (upload_new_base.sh, setup_arduino_symlinks.sh) for easier development and deployment workflow.
+Created upload scripts (upload\_new\_base.sh, setup\_arduino\_symlinks.sh) for easier development and deployment workflow.
 
 Once the new base was rebuilt I had to modify the code for it to work, the original base used the VirHas library (custom internal library of the airlab to manage and control the triksta bases) so given this used a differential drive I had to implement my own PID movement controller (Proportional–integral–derivative controller) but keeping the commands the same in order to keep the original tino movement
 
 Once the base was ready I started rebuilding tino, removing things that where not needed and adding the new things and new cable harness. I also added the speakers in the servo head because it had enough space and the microphone was passed through the fabric on the head
 
-Then, once built, I had to test the connection from the arduinos to the Jetson, this proved to have some issues, the head Arduiono was a az-delivery arduino mega clone, but the jetson does not had the needed drivers (CH340 ) the only solution was to rebuilt the kernel of the jetpack system so to include it, given that this would be time consuming I decided to change that arduino mega with a Arduino elego uno r3. this one properly linked and connected to the jetson, the change did not create any issue as the head only used 3 PWM pins for the servos.
+Then, once built, I had to test the connection from the arduinos to the Jetson, this proved to have some issues, the head Arduiono was a az-delivery arduino mega clone, but the jetson does not had the needed drivers (CH340) the only solution was to rebuilt the kernel of the jetpack system so to include it, given that this would be time consuming I decided to change that arduino mega with a Arduino elego uno r3. this one properly linked and connected to the jetson, the change did not create any issue as the head only used 3 PWM pins for the servos.
 I also setup a symlink using the serial of the devices so that when connected they always be in the same route /dev/ttyHEAD /dev/ttyBASE /dev/ttyLEG
 
-once all systems where working again and some fine tunning had to be done to the gamepad (we changed from D input to X input because the jetson did not had the drivers to manage the D input) tino was working once again. The next step was going to test the wheels, the wheels we had put, given the weight of the robot the tire Partially de-beaded. consulting this issue we had 3 approaches to take next week
-1. Fill the current wheels with hotglue, easy but could cause issues with the traction of the tire
-2. use some hard plastic wheels but is demanding in labor because this wheels do not have the 6mm axis needed to connect to the motor axis, so we will need to modify them a lot in order to connect properly
-3. buy a new pair of wheels that can support this weight better
+once all systems where working again and some fine tunning had to be done to the gamepad (we changed from D input to X input because the jetson did not had the drivers to manage the D input) tino was working once again. The next step was going to test the wheels, the wheels we had put, given the weight of the robot the tire Partially de-beaded. consulting this issue we had 3 approaches to take next week:
 
-We also encountered some issues with the fabric enrolling over the wheels so we may need to add a type of "bumper" in order to avoid this
+\begin{enumerate}
+\item Fill the current wheels with hotglue, easy but could cause issues with the traction of the tire
+\item use some hard plastic wheels but is demanding in labor because this wheels do not have the 6mm axis needed to connect to the motor axis, so we will need to modify them a lot in order to connect properly
+\item buy a new pair of wheels that can support this weight better
+\end{enumerate}
+
+We also encountered some issues with the fabric enrolling over the wheels so we may need to add a type of ``bumper'' in order to avoid this
 
 Also we need to find a way to make the camera avoid the fabric, or better said, the fabric to avoid moving over the camera FOV
 I tried sticking the fabric to a foam external shell I put over the camera but this velcro was not sticking to the fabric given the camera is behind the leg, and this side of the robot moves the fabric a lot. Also using this foam to make the shell was not ideal because it was absorbing the camera heat and not letting the camera cooldown.
@@ -309,12 +314,12 @@ this are the issues to solve by next week
 
 May 13
 This week started by trying to solve the wheel issue, we tried to fill the wheels with hot glue, this worked perfectly, the wheels did not de-bead and the traction was good.
-Also create a "bumper" to avoid the fabric to get stuck in the wheels, this works on most of the scenarios but there are still some cases that it may get stuck, so we will need to keep testing it.
+Also create a ``bumper'' to avoid the fabric to get stuck in the wheels, this works on most of the scenarios but there are still some cases that it may get stuck, so we will need to keep testing it.
 
 I didnt have time to create the shell for the camera
 
 May 15
-Implemented comprehensive VR data recording functionality for Unity integration. Created vr_data_recorder_node.py and vr_data_extractor.py to capture and process all robot sensor data, human pose detection, audio streams, and robot state information for VR system development and testing.
+Implemented comprehensive VR data recording functionality for Unity integration. Created vr\_data\_recorder\_node.py and vr\_data\_extractor.py to capture and process all robot sensor data, human pose detection, audio streams, and robot state information for VR system development and testing.
 
 The recording system includes service controls for starting/stopping data capture, metadata management, and proper data synchronization across all robot systems. This allows for detailed analysis of robot behavior and human-robot interactions for VR system optimization.
 
@@ -335,7 +340,7 @@ We tested the camera and it worked perfectly, the fabric did not get in the came
 
 Also this week the head arms we printed broke, we thought it was because of the 3d printed layer orientation and force applied, so we redesigned the arms to have a more robust design, this time we printed it in the other orientation so that the layers orientation is perpendicular to the force applied, this way we hope that the arms will not break again.
 
-June 24 - July 1
+June 24--July 1
 This week we got the new brackets for holding the new more powerful motors, this change was done because the old motors suffered a lot of heat due to tino weight. This new ones can support more weight and have a better heat dissipation
 the only issue they had is that the old motor bracket was not compatible so we had to wait for the new ones to arrive. this new bracket proved difficult to implement as the holes they had where not aligned with the item profiles, also the motors axis was more up so tino was dragging on the floor
 To fix both of this issues I created a spacer with some metal square profiles, this way the motors where aligned with the item profiles and also the axis was at the right height so that tino could move freely.
@@ -350,27 +355,35 @@ Implemented audio messages system with chime notifications, providing auditory f
 
 July 1
 After a period of use the arms for the head broke again, There is still a lot of flex in the arms, so we decided to redesign the arms again, this time we decided to change the approach. Doing some research on Stewart platforms we found that the arms should have rod end (heim joints) on both ends, this way the arms can move freely and not have any flex. The current design was using a bearing on the servo side and a rod end on the head side, this was not ideal as the bearing was not allowing the arm to move freely, so we redesigned the arms to have rod ends on both sides, this way the arms can move freely and not have any flex. The new design was printed in PLA and combined with some metal heim joints, this way the arms can move freely and not have any flex. 
-The only issue this created was that when stationary the head had some wobble, this simple because the head is held by the 3 arms that can move thanks to the rod end. We dont think this is a major issue as it may add a bit to the "expresiiveness" of tino head movement.
+The only issue this created was that when stationary the head had some wobble, this simple because the head is held by the 3 arms that can move thanks to the rod end. We dont think this is a major issue as it may add a bit to the ``expresiiveness'' of tino head movement.
 
 July 8
 Based on the VR system I had to modify the current system of movement to better integrate with the VR environment.
 The old system using the gamepad was broadcasting a messgage of movement to the 3 arduinos, this was so that the head, leg, and base could move synchronously
-But now in the VR system we need to "independicese" this 3 system.
+But now in the VR system we need to ``independicese'' this 3 system.
 
-The head is controlled bu the VR movement, this already works given the head comand topics, we only had to remove the defined "routines" that it had when moving forward and to the sides.
+The head is controlled bu the VR movement, this already works given the head comand topics, we only had to remove the defined ``routines'' that it had when moving forward and to the sides.
 The leg new needs to be controled with 4 different states.
 Previously the leg was just resting and when a movmeent command was sent it did a whole continus rotation based on the sinusoidal system that was created originally.
-Now because this new system the idea is that the user in the VR need to "drag" the same way tino "drags" the leg in the real world, so for this we created 4 states
-0 - Resting
-1 - little push (this was done so that tino can express a "pointin" to something or "looking" at something to try and get the attention of the user)
-2 - leg forward (moves the leg to the max reach before doing the dragging movement)
-3 - leg backward (moves the leg back doing the "dragging" movement up to the resting position)
+Now because this new system the idea is that the user in the VR need to ``drag'' the same way tino ``drags'' the leg in the real world, so for this we created 4 states:
 
-We also had to modify the base movement, this was done by removing the old gamepad movement and implementing this new 4 state system
-0 - Resting
-1 - little push (the base moves forward and backward a bit very fast to express a "pointing" )
-2 - Does nothing, because at this point the leg is just being moved forward to prepare for the dragging
-3 - move forward (this is the dragging movement, the base moves forward a determided amount of time to simulate the dragging movement)
+\begin{enumerate}
+\setcounter{enumi}{-1}
+\item Resting
+\item little push (this was done so that tino can express a ``pointin'' to something or ``looking'' at something to try and get the attention of the user)
+\item leg forward (moves the leg to the max reach before doing the dragging movement)
+\item leg backward (moves the leg back doing the ``dragging'' movement up to the resting position)
+\end{enumerate}
+
+We also had to modify the base movement, this was done by removing the old gamepad movement and implementing this new 4 state system:
+
+\begin{enumerate}
+\setcounter{enumi}{-1}
+\item Resting
+\item little push (the base moves forward and backward a bit very fast to express a ``pointing'')
+\item Does nothing, because at this point the leg is just being moved forward to prepare for the dragging
+\item move forward (this is the dragging movement, the base moves forward a determided amount of time to simulate the dragging movement)
+\end{enumerate}
 
 In order to make all of this systems work properly we had to made them atomic, and also this new states will be sent as pulses instead of continuous movement
 This way the user can control tino in a more natural way, and also the user can express more emotions and actions with tino
@@ -379,7 +392,7 @@ While doing the leg changes we noticed something intresting, the PWM that the dr
 from  0 to  255 the motor that moves the leg goes forward from very slow to very fast (as intended) but as one would expect the negative values to go backward, it does not, it goes slow at -235 and fast at -1 
 This is not an issue as we can create the respective system to make it work with this values, but it is something to keep in mind for the future
 
-July 10-13
+July 10--13
 Enhanced VR interface with improved odometry checking and loss detection, simplifying the condition logic for more reliable operation. Updated motor speed and angular parameters for improved performance and smoother robot movement.
 
 Added comprehensive logging improvements across pose detection and VR interface nodes, reducing log verbosity while maintaining essential debugging information. Modified skeleton publish rate in robot controller for optimal performance balance between real-time tracking and system resources.

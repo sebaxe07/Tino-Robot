@@ -18,3 +18,123 @@ log/
 # System files
 .DS_Store
 Thumbs.db
+
+# LaTeX auxiliary files
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.brf
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.out
+*.toc
+*.synctex.gz
+*.synctex(busy)
+*.pdfsync
+
+# LaTeX Beamer
+*.nav
+*.snm
+*.vrb
+
+# LaTeX glossaries
+*.acn
+*.acr
+*.alg
+*.glg
+*.glo
+*.gls
+*.ist
+*.xdy
+
+# LaTeX hyperref
+*.figlist
+*.makefile
+*.run.xml
+
+# LaTeX algorithm2e
+*.loa
+
+# LaTeX nomencl
+*.nlo
+*.nls
+
+# LaTeX TikZ & PGF
+*.figlist
+*.makefile
+
+# LaTeX minitoc
+*.maf
+*.mlf
+*.mlt
+*.mtc[0-9]*
+*.slf[0-9]*
+*.slt[0-9]*
+*.stc[0-9]*
+
+# LaTeX biblatex
+*.bcf
+*.run.xml
+
+# LaTeX latexmk
+*.fdb_latexmk
+*.fls
+
+# LaTeX changes
+*.soc
+
+# LaTeX comment
+*.cut
+
+# LaTeX endfloat
+*.ttt
+*.fff
+
+# LaTeX sagetex
+*.sagetex.sage
+*.sagetex.py
+*.sagetex.scmd
+
+# LaTeX scrwfile
+*.wrt
+
+# LaTeX sympy
+*.upa
+*.upb
+
+# LaTeX pythontex
+*.pytxcode
+pythontex-files-*/
+
+# LaTeX tcolorbox
+*.listing
+
+# LaTeX xindy
+*.xdy
+
+# LaTeX todonotes
+*.tdo
+
+# LaTeX easy-todo
+*.lod
+
+# LaTeX glossaries-extra
+*.glstex
+
+# LaTeX xmpincl
+*.xmpi
+
+# LaTeX pax
+*.pax
+
+# LaTeX pdfpcnotes
+*.pdfpc
+
+# Editor backups and temporary files
+*~
+*#
+.#*

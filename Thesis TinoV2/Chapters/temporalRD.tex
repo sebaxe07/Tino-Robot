@@ -10,13 +10,13 @@
         \hline
         \textbf{Technology} & \textbf{Pros} & \textbf{Cons} & \textbf{Key Papers \& Resources} \\ \hline
 
-        Visual Odometry (VO) & Could use existing camera; no hardware mods& Narrow FOV; tilt disrupts SLAM & \href{https://arxiv.org/abs/2007.11898}{ORB-SLAM3} (Campos et al., 2021) – Robust monocular/Stereo SLAM. \\ 
-         & & & \href{https://ieeexplore.ieee.org/document/7782863}{SVO: Semidirect Visual Odometry } for Monocular and Multicamera Systems \\ \hline
+        Visual Odometry (VO) & Could use existing camera; no hardware mods& Narrow FOV; tilt disrupts SLAM & \cite{campos2021orbslam3} – Robust monocular/Stereo SLAM. \\ 
+         & & & \cite{forster2016svo} for Monocular and Multicamera Systems \\ \hline
   
-        IMU + Wheel Encoders & Low cost; integrates motion data & Drift over time; Stewart tilt issues & \href{https://www.researchgate.net/publication/356744906_Sensor_Fusion_for_Mobile_Robot_Localization_Using_Extended_Kalman_Filter_UWB_ToF_and_ArUco_Markers}{Sensor Fusion for Mobile Robot Localization} (Huang et al., 2018) – Kalman filtering. \\ 
-         & & & \href{https://thesai.org/Downloads/Volume13No2/Paper_4-Extended_Kalman_Filter_Sensor_Fusion_in_Practice.pdf}{EKF Sensor Fusion in Practice}  for Mobile Robot Localization \\ \hline
+        IMU + Wheel Encoders & Low cost; integrates motion data & Drift over time; Stewart tilt issues & \cite{huang2018sensor} – Kalman filtering. \\ 
+         & & & \cite{ekf2021practice} for Mobile Robot Localization \\ \hline
          
-        UWB-IR & Small footprint; could work with fabric & Requires external anchors & \href{https://ieeexplore.ieee.org/abstract/document/4380919}{A UWB-IR based Localization System} for Indoor Robot Navigation. \\ \hline
+        UWB-IR & Small footprint; could work with fabric & Requires external anchors & \cite{uwb2007localization} for Indoor Robot Navigation. \\ \hline
     \end{tabular}
 \end{table}
 
@@ -31,27 +31,24 @@
     \begin{tabular}{|>{\raggedright\arraybackslash}p{3cm}|>{\raggedright\arraybackslash}p{3cm}|>{\raggedright\arraybackslash}p{3cm}|>{\raggedright\arraybackslash}p{5cm}|}
         \hline
         \textbf{Technology} & \textbf{Pros} & \textbf{Cons} & \textbf{Key Papers \& Resources} \\ \hline
-        UWB Anchors & High accuracy; no line-of-sight & Setup/calibration required & \href{https://journals.sagepub.com/doi/full/10.1177/1729881418795767}{Robot vision ultra-wideband wireless sensor} in non-cooperative industrial environments  \\ \hline
+        UWB Anchors & High accuracy; no line-of-sight & Setup/calibration required & \cite{chen2018uwb} in non-cooperative industrial environments  \\ \hline
         
-        AprilTags & Low cost; precise & Line-of-sight; limited area & \href{https://april.eecs.umich.edu/papers/details.php?name=olson2011tags}{AprilTag: A Robust Fiducial System} (Olson, 2011). \\ \hline
+        AprilTags & Low cost; precise & Line-of-sight; limited area & \cite{olson2011apriltag}. \\ \hline
         
-        MoCap Systems & Sub-mm accuracy & Expensive; fixed environment & \href{https://www.naturalpoint.com/optitrack/applications/robotics/}{OptiTrack for Robotics} – Industrial use cases. \\ \hline
+        MoCap Systems & Sub-mm accuracy & Expensive; fixed environment & \cite{optitrack2024robotics} – Industrial use cases. \\ \hline
     \end{tabular}
 \end{table}
 
 
 \section*{Orientation Technologies}
 \begin{itemize}
-    \item \textbf{Sensor Fusion}: \href{https://www.researchgate.net/publication/356744906_Sensor_Fusion_for_Mobile_Robot_Localization_Using_Extended_Kalman_Filter_UWB_ToF_and_ArUco_Markers}{A Review of Sensor Fusion Techniques} filters for combining UWB, IMU, and encoders. (Waiting for access request)
+    \item \textbf{Sensor Fusion}: \cite{huang2018sensor} filters for combining UWB, IMU, and encoders. (Waiting for access request)
 
-    \item \textbf{UWBOri}:
-    \href{https://hal.science/hal-04754129/}{enabling accurate orientation estimation} with ultra-wideband signals 
+    \item \textbf{UWBOri}: \cite{uwbori2024} with ultra-wideband signals 
 
-    \item \textbf{NLOS Mitigation}:
-    \href{https://ieeexplore.ieee.org/abstract/document/8989827}{UWB System for Indoor Positioning} and Tracking With Arbitrary Target Orientation, Optimal Anchor Location, and Adaptive NLOS Mitigation
+    \item \textbf{NLOS Mitigation}: \cite{luo2020uwb} and Tracking With Arbitrary Target Orientation, Optimal Anchor Location, and Adaptive NLOS Mitigation
 
-    \item \textbf{RPO}:
-    \href{https://ieeexplore.ieee.org/abstract/document/8827149}{Measurement of Relative Position and Orientation} using UWB
+    \item \textbf{RPO}: \cite{rpo2019uwb} using UWB
 \end{itemize}
 
 \section*{Human Detection Technologies}
@@ -62,9 +59,9 @@
     \begin{tabular}{|>{\raggedright\arraybackslash}p{3cm}|>{\raggedright\arraybackslash}p{3cm}|>{\raggedright\arraybackslash}p{3cm}|>{\raggedright\arraybackslash}p{5cm}|}
         \hline
         \textbf{Technology} & \textbf{Pros} & \textbf{Cons} & \textbf{Key Papers \& Resources} \\ \hline
-        Thermal Cameras & Works in darkness; fabric-friendly? & No depth; limited range & \href{https://www.researchgate.net/publication/330762720_Real-Time_Implementation_of_Human_Detection_in_Thermal_Imagery_Based_on_CNN}{Thermal Human Detection}  – CNN-based approaches. \\ \hline
-        Ultrasonic Array & Low cost; proximity detection & No human distinction & \href{https://koreascience.kr/article/JAKO202019962560668.pdf}{Ultrasonic Human Tracking} (In Korean). \\ \hline
-        Upgraded Camera & Wider FOV; ML-compatible & Fabric obstruction; compute-heavy & \href{https://arxiv.org/abs/2207.02696}{YOLOv7} (Wang et al., 2022) – Real-time object detection. \\ \hline
+        Thermal Cameras & Works in darkness; fabric-friendly? & No depth; limited range & \cite{thermal2019detection} – CNN-based approaches. \\ \hline
+        Ultrasonic Array & Low cost; proximity detection & No human distinction & \cite{ultrasonic2020tracking} (In Korean). \\ \hline
+        Upgraded Camera & Wider FOV; ML-compatible & Fabric obstruction; compute-heavy & \cite{wang2022yolov7} – Real-time object detection. \\ \hline
     \end{tabular}
 \end{table}
 
@@ -75,10 +72,10 @@
     \begin{tabular}{|>{\raggedright\arraybackslash}p{3cm}|>{\raggedright\arraybackslash}p{3cm}|>{\raggedright\arraybackslash}p{3cm}|>{\raggedright\arraybackslash}p{5cm}|}
         \hline
         \textbf{Technology} & \textbf{Pros} & \textbf{Cons} & \textbf{Key Papers \& Resources} \\ \hline
-        RGB-D Cameras & Depth data; multi-human tracking & Fixed installation & \href{https://arxiv.org/abs/1812.08008}{OpenPose: Real-Time Human Pose} (Cao et al., 2019). \\ 
-         & & & \href{https://ieeexplore.ieee.org/abstract/document/9480177}{Azure Kinect for Robotics} – Performance Analysis of Body Tracking. \\ \hline
-        LiDAR & High-resolution 3D mapping & Expensive; compute-heavy & \href{https://link.springer.com/article/10.1007/s10514-019-09883-y}{LiDAR-based Human detection} (Zhi Yan et al., 2019). \\ \hline
-        WiFi/Radar & Privacy-friendly; fabric-penetrating & Lower resolution & \href{https://ieeexplore.ieee.org/abstract/document/9982449}{RF-Sensing}: A New Way to Observe Surroundings\\ \hline
+        RGB-D Cameras & Depth data; multi-human tracking & Fixed installation & \cite{cao2019openpose}. \\ 
+         & & & \cite{azure2021kinect} – Performance Analysis of Body Tracking. \\ \hline
+        LiDAR & High-resolution 3D mapping & Expensive; compute-heavy & \cite{yan2019lidar}. \\ \hline
+        WiFi/Radar & Privacy-friendly; fabric-penetrating & Lower resolution & \cite{rfsensing2022}: A New Way to Observe Surroundings\\ \hline
     \end{tabular}
 \end{table}
 
@@ -93,13 +90,13 @@
 \begin{itemize}[leftmargin=*,nosep]
     \item \textbf{Variants:}
     \begin{itemize}
-        \item \textit{ORB-SLAM3} (supports RGB-D): \href{https://github.com/UZ-SLAMLab/ORB_SLAM3}{GitHub}
+        \item \textit{ORB-SLAM3} (supports RGB-D): \cite{orbslam3github}
         \begin{itemize}
             \item[+] Synergy with human detection via depth data
             \item[+] Robust feature matching for dynamic environments
             \item[--] Higher computational cost (requires GPU optimization)
         \end{itemize}
-        \item \textit{SVO} (Semi-direct Visual Odometry):\href{https://github.com/uzh-rpg/rpg_svo_pro_open}{GitHub}
+        \item \textit{SVO} (Semi-direct Visual Odometry): \cite{svogithub}
         \begin{itemize}
             \item[+] Works with fisheye/catadioptric cameras (wide FOV)
             \item[+] Lower computational footprint

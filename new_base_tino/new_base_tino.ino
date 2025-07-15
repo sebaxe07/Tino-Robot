@@ -9,7 +9,7 @@ void process_special_command(char* buffer);
 void send_status_update();
 
 // Debug flag - set to true to enable debug prints, false to disable
-#define DEBUG_MODE true
+#define DEBUG_MODE false
 
 // Debug print helper functions
 void debug_print(const char* message) {
@@ -30,6 +30,12 @@ void debug_print(int value) {
   }
 }
 
+void debug_print(unsigned long value) {
+  if (DEBUG_MODE) {
+    Serial.print(value);
+  }
+}
+
 void debug_println(const char* message) {
   if (DEBUG_MODE) {
     Serial.println(message);
@@ -43,6 +49,12 @@ void debug_println(float value) {
 }
 
 void debug_println(int value) {
+  if (DEBUG_MODE) {
+    Serial.println(value);
+  }
+}
+
+void debug_println(unsigned long value) {
   if (DEBUG_MODE) {
     Serial.println(value);
   }
@@ -113,6 +125,18 @@ unsigned long phaseStartTimeAngular = 0; // Timer for angular movement
 bool wasLinearYActive = false;     // Tracks if linearY was previously active
 bool wasAngularActive = false;     // Tracks if angular was previously active
 bool angularDirectionPositive = false; // Track the direction of angular movement
+
+// State tracking for atomic movements that must complete
+bool isCase1InProgress = false;    // Tracks if case 1 "little push" is in progress
+bool isCase2InProgress = false;    // Tracks if case 2 timing cycle is in progress
+bool isCase3InProgress = false;    // Tracks if case 3 movement sequence is in progress
+bool isCase2Locked = false;        // Lock system for case 2 - ignores all commands except case 3
+bool pendingCase3 = false;         // Tracks if case 3 is waiting for case 2 to complete
+float pendingAngular = 0.0;        // Stores angular value for pending case 3 execution
+int lastLinearCommand = 0;         // Track the last linearY command received
+
+// Timing constants
+const unsigned long CASE2_CYCLE_TIME = 1500;  // 1.5 seconds for case 2 timing cycle
 //_______________________________
 
 // Note: last_command_time and current_time are now used from RaspberryCommunication.cpp
@@ -221,37 +245,359 @@ void moveRobot(float linearY, float angular) {
 
 void updateBaseMovementByTime(float linearY, float angular) {
   unsigned long currentTime = millis();
-  unsigned long elapsedTimeLinear = currentTime - phaseStartTimeLinear;
-  unsigned long elapsedTimeAngular = currentTime - phaseStartTimeAngular;
-
-  // Manage transitions
-  if (linearY != 0 && !wasLinearYActive && angular == 0) {
-    phaseStartTimeLinear = millis();  // Reset timer for linearY when it becomes active
-    wasLinearYActive = true;
-    wasAngularActive = false;
-  } else if (angular != 0 && !wasAngularActive && linearY == 0) {
-    phaseStartTimeAngular = millis();  // Reset timer for angular when it becomes active
-    wasAngularActive = true;
-    wasLinearYActive = false;
-    angularDirectionPositive = angular > 0; // Store direction of angular movement
-  } else if (linearY == 0 && angular == 0) {
-    wasLinearYActive = false;
-    wasAngularActive = false;
+  
+  // Convert linearY to integer to check for specific command values
+  int command = (int)linearY;
+  
+  // Debug: Print command received (only when it changes)
+  if (DEBUG_MODE && command != lastLinearCommand) {
+    debug_print("BASE Command: ");
+    debug_print(lastLinearCommand);
+    debug_print(" -> ");
+    debug_print(command);
+    debug_print(" | Current time: ");
+    debug_println(currentTime);
+  }
+  
+  // Check if case 1 is in progress and must complete
+  if (isCase1InProgress) {
+    unsigned long elapsedTimeLinear = currentTime - phaseStartTimeLinear;
+    // Little push movement profile for command 1 - must complete
+    if (elapsedTimeLinear < 600) {
+      linearY = 0;  // First phase: 600ms delay before movement
+    } else if (elapsedTimeLinear >= 600 && elapsedTimeLinear < 800) {
+      linearY = 12;  // Second phase: 200ms forward movement at moderate speed
+    } else if (elapsedTimeLinear >= 800 && elapsedTimeLinear < 1000) {
+      linearY = -12;  // Third phase: 200ms backward movement to return to original position
+    } else {
+      linearY = 0;  // Stop movement after completing the push cycle
+      wasLinearYActive = false;  // Reset the state
+      isCase1InProgress = false;  // Mark case 1 as completed
+      debug_println("BASE Case 1 completed");
+    }
+    lastLinearCommand = command;
+    moveRobot(linearY, angular);
+    return; // Exit early to prevent other command processing
+  }
+  
+  // Check if case 2 is in progress and must complete (blocks ALL commands including case 3)
+  if (isCase2InProgress) {
+    unsigned long elapsedTimeLinear = currentTime - phaseStartTimeLinear;
+    // Case 2: Timing cycle that matches leg timing - no movement, just waiting
+    debug_print("BASE Case 2 timing: elapsed=");
+    debug_print(elapsedTimeLinear);
+    debug_print("ms, target=");
+    debug_print(CASE2_CYCLE_TIME);
+    debug_print("ms, remaining=");
+    debug_println(CASE2_CYCLE_TIME - elapsedTimeLinear);
+    
+    if (elapsedTimeLinear < CASE2_CYCLE_TIME) {  // Use variable for timing cycle
+      debug_println("BASE Case 2 timing cycle in progress - blocking all commands");
+      
+      // Check if case 3 command is received during case 2 timing - save it for later
+      if (command == 3 && !pendingCase3) {
+        pendingCase3 = true;
+        pendingAngular = angular;  // Store the angular value for later execution
+        debug_print("BASE Case 3 received during case 2 - saving for later execution (angular: ");
+        debug_print(pendingAngular);
+        debug_println(")");
+      }
+      
+      linearY = 0;  // No movement during timing cycle
+    } else {
+      linearY = 0;  // Still no movement
+      wasLinearYActive = false;  // Reset the state
+      isCase2InProgress = false;  // Mark case 2 timing cycle as completed
+      isCase2Locked = true;  // NOW lock the system - only case 3 can unlock
+      debug_print("BASE Case 2 timing completed after ");
+      debug_print(elapsedTimeLinear);
+      debug_println("ms - LOCKED for case 3");
+      
+      // If case 3 was pending, automatically execute it now
+      if (pendingCase3) {
+        debug_print("BASE Executing pending case 3 after case 2 completion (angular: ");
+        debug_print(pendingAngular);
+        debug_println(")");
+        pendingCase3 = false;  // Clear the pending flag
+        isCase2Locked = false;  // UNLOCK the system
+        
+        // Check what type of pending case 3 based on stored angular value
+        if (pendingAngular == 0) {
+          // Pending forward movement
+          phaseStartTimeLinear = millis();  // Reset timer for case 3
+          wasLinearYActive = true;
+          wasAngularActive = false;
+          isCase3InProgress = true;  // Mark case 3 as started
+          debug_print("BASE Auto case 3 forward timer started at: ");
+          debug_println(phaseStartTimeLinear);
+          linearY = 16;  // Forward movement for ~1.7 seconds
+          debug_println("BASE Auto case 3 forward movement started");
+        } else {
+          // Pending rotation movement
+          phaseStartTimeAngular = millis();  // Reset timer for case 3
+          wasAngularActive = true;
+          wasLinearYActive = false;
+          isCase3InProgress = true;  // Mark case 3 as started
+          angularDirectionPositive = pendingAngular > 0; // Store direction
+          debug_print("BASE Auto case 3 rotation timer started at: ");
+          debug_println(phaseStartTimeAngular);
+          angular = angularDirectionPositive ? 1.1 : -1.1;  // Start rotation
+          debug_print("BASE Auto case 3 rotation ");
+          debug_print(angularDirectionPositive ? "RIGHT" : "LEFT");
+          debug_println(" movement started");
+        }
+        pendingAngular = 0.0;  // Clear the stored angular value
+      }
+    }
+    lastLinearCommand = command;
+    moveRobot(linearY, 0);  // No angular movement during case 2 progress
+    return; // Exit early to prevent other command processing (including case 3)
+  }
+  
+  // Check if case 3 is in progress and must complete
+  if (isCase3InProgress) {
+    // Check if this is a linear (forward) or angular (rotation) case 3
+    if (wasLinearYActive) {
+      // Linear case 3 (forward movement)
+      unsigned long elapsedTimeLinear = currentTime - phaseStartTimeLinear;
+      if (elapsedTimeLinear < 1720) {
+        linearY = 16;  // Forward movement for ~1.7 seconds
+      } else {
+        linearY = 0;  // Stop movement after completing the forward cycle
+        wasLinearYActive = false;  // Reset the state
+        isCase3InProgress = false;  // Mark case 3 as completed
+        debug_println("BASE Case 3 forward completed");
+      }
+      lastLinearCommand = command;
+      moveRobot(linearY, 0);  // No angular movement for forward case
+    } else if (wasAngularActive) {
+      // Angular case 3 (rotation movement)
+      unsigned long elapsedTimeAngular = currentTime - phaseStartTimeAngular;
+      if (elapsedTimeAngular < 1720) {
+        angular = angularDirectionPositive ? 1.1 : -1.1;  // Continue rotation
+        debug_print("BASE Case 3 rotation ");
+        debug_print(angularDirectionPositive ? "RIGHT" : "LEFT");
+        debug_print(" in progress, elapsed: ");
+        debug_println(elapsedTimeAngular);
+      } else {
+        angular = 0;  // Stop rotation after completing the cycle
+        wasAngularActive = false;  // Reset the state
+        isCase3InProgress = false;  // Mark case 3 as completed
+        debug_print("BASE Case 3 rotation ");
+        debug_print(angularDirectionPositive ? "RIGHT" : "LEFT");
+        debug_println(" completed");
+      }
+      lastLinearCommand = command;
+      moveRobot(0, angular);  // No linear movement for rotation case
+    } else {
+      // Fallback - shouldn't happen but handle gracefully
+      isCase3InProgress = false;
+      debug_println("BASE Case 3 completed - unknown type");
+      lastLinearCommand = command;
+      moveRobot(0, 0);
+    }
+    return; // Exit early to prevent other command processing
   }
 
-  if (linearY != 0 && angular == 0) {
-    // Linear movement profile
-    if (elapsedTimeLinear < 1300) {
-      linearY = 0;  // First phase: 1.3 seconds pause
-    } else if (elapsedTimeLinear >= 1300 && elapsedTimeLinear < 3020) {
-      linearY = 16;  // Second phase: ~1.7 seconds forward movement
+  // Lock system: if case 2 is locked, only allow case 3 to unlock
+  if (isCase2Locked && command != 3) {
+    debug_println("BASE Case 2 locked - waiting for case 3");
+    lastLinearCommand = command;
+    moveRobot(0, 0);  // Stop all movement while locked
+    return;  // Exit early, ignoring all commands except case 3
+  }
+  
+  // Only move forward when command is 3 (finish cycle command from leg)
+  if (command == 3) {
+    // Only allow case 3 if we're coming from case 2 (locked state)
+    if (!isCase2Locked) {
+      debug_println("BASE Case 3 ignored - need case 2 first");
+      lastLinearCommand = command;
+      moveRobot(0, 0);  // Stop if case 3 is called incorrectly
+      return;
+    }
+    
+    // Check what type of case 3 movement based on angular value
+    if (angular == 0) {
+      // Case 3,0 - Forward movement (existing behavior)
+      // Manage transitions for command 3
+      if (!wasLinearYActive) {
+        debug_println("BASE Starting case 3 forward - unlocking case 2");
+        isCase2Locked = false;  // UNLOCK the system
+        phaseStartTimeLinear = millis();  // Reset timer for linearY when it becomes active
+        wasLinearYActive = true;
+        wasAngularActive = false;
+        isCase3InProgress = true;  // Mark case 3 as started
+        debug_print("BASE Case 3 forward timer started at: ");
+        debug_println(phaseStartTimeLinear);
+      }
+      
+      // Calculate elapsed time AFTER timer reset
+      unsigned long elapsedTimeLinear = millis() - phaseStartTimeLinear;
+      
+      // Linear movement profile for command 3 (no delay, immediate forward movement)
+      debug_print("BASE Case 3 forward elapsed time: ");
+      debug_println(elapsedTimeLinear);
+      if (elapsedTimeLinear < 1720) {
+        linearY = 16;  // Forward movement for ~1.7 seconds
+        debug_println("BASE Case 3 forward movement in progress");
+      } else {
+        linearY = 0;  // Stop movement after completing the forward cycle
+        wasLinearYActive = false;  // Reset the state so it can be triggered again
+        isCase3InProgress = false;  // Mark case 3 as completed
+        debug_println("BASE Case 3 forward completed");
+      }
+
+      lastLinearCommand = command;
+      moveRobot(linearY, 0);  // No angular movement for forward case
+      
+    } else if (angular == 1 || angular == -1) {
+      // Case 3,1 or Case 3,-1 - Rotation movement (new behavior)
+      // Manage transitions for command 3 rotation
+      if (!wasAngularActive) {
+        debug_print("BASE Starting case 3 rotation ");
+        debug_print(angular > 0 ? "RIGHT" : "LEFT");
+        debug_println(" - unlocking case 2");
+        isCase2Locked = false;  // UNLOCK the system
+        phaseStartTimeAngular = millis();  // Reset timer for angular when it becomes active
+        wasAngularActive = true;
+        wasLinearYActive = false;
+        isCase3InProgress = true;  // Mark case 3 as started
+        angularDirectionPositive = angular > 0; // Store direction
+        debug_print("BASE Case 3 rotation timer started at: ");
+        debug_println(phaseStartTimeAngular);
+      }
+      
+      // Calculate elapsed time AFTER timer reset
+      unsigned long elapsedTimeAngular = millis() - phaseStartTimeAngular;
+      
+      // Rotation movement profile for command 3 (atomic rotation)
+      debug_print("BASE Case 3 rotation elapsed time: ");
+      debug_println(elapsedTimeAngular);
+      if (elapsedTimeAngular < 1720) {
+        // Use the same duration as forward movement for consistency
+        angular = angularDirectionPositive ? 1.1 : -1.1;  // Full rotation speed
+        debug_print("BASE Case 3 rotation ");
+        debug_print(angularDirectionPositive ? "RIGHT" : "LEFT");
+        debug_println(" movement in progress");
+      } else {
+        angular = 0;  // Stop rotation after completing the cycle
+        wasAngularActive = false;  // Reset the state so it can be triggered again
+        isCase3InProgress = false;  // Mark case 3 as completed
+        debug_print("BASE Case 3 rotation ");
+        debug_print(angularDirectionPositive ? "RIGHT" : "LEFT");
+        debug_println(" completed");
+      }
+
+      lastLinearCommand = command;
+      moveRobot(0, angular);  // No linear movement for rotation case
+      
     } else {
-      phaseStartTimeLinear = millis();  // Reset cycle after 3.02 seconds total
+      // Invalid angular value for case 3
+      debug_print("BASE Case 3 invalid angular value: ");
+      debug_println(angular);
+      lastLinearCommand = command;
+      moveRobot(0, 0);  // Stop for invalid commands
+    }
+    
+  } else if (command == 1 && angular == 0) {
+    // Command 1: "Little push" - delay, then brief forward movement, then return to original position
+    if (!wasLinearYActive) {
+      debug_println("BASE Starting little push");
+      phaseStartTimeLinear = millis();  // Reset timer for linearY when it becomes active
+      wasLinearYActive = true;
+      wasAngularActive = false;
+      isCase1InProgress = true;  // Mark case 1 as started
+    }
+    
+    // Calculate elapsed time AFTER timer reset
+    unsigned long elapsedTimeLinear = millis() - phaseStartTimeLinear;
+    
+    // Little push movement profile for command 1
+    if (elapsedTimeLinear < 600) {
+      linearY = 0;  // First phase: 600ms delay before movement
+    } else if (elapsedTimeLinear >= 600 && elapsedTimeLinear < 800) {
+      linearY = 12;  // Second phase: 200ms forward movement at moderate speed
+    } else if (elapsedTimeLinear >= 800 && elapsedTimeLinear < 1000) {
+      linearY = -12;  // Third phase: 200ms backward movement to return to original position
+    } else {
+      linearY = 0;  // Stop movement after completing the push cycle
+      wasLinearYActive = false;  // Reset the state so it can be triggered again
+      isCase1InProgress = false;  // Mark case 1 as completed
+      debug_println("BASE Little push completed");
     }
 
+    lastLinearCommand = command;
     moveRobot(linearY, angular);
+    
+  } else if (command == 2 && angular == 0) {
+    // Command 2: Start timing cycle that blocks all commands (including case 3)
+    if (!isCase2InProgress) {
+      debug_println("BASE Starting case 2 timing cycle - blocking all commands");
+      phaseStartTimeLinear = millis();  // Reset timer for case 2 timing cycle
+      wasLinearYActive = true;
+      wasAngularActive = false;
+      isCase2InProgress = true;  // Mark case 2 timing cycle as started
+      isCase2Locked = false;     // Not locked yet, still in progress
+      debug_print("BASE Case 2 timer started at: ");
+      debug_print(phaseStartTimeLinear);
+      debug_print("ms, will complete at: ");
+      debug_println(phaseStartTimeLinear + CASE2_CYCLE_TIME);
+    }
+    
+    // Calculate elapsed time AFTER timer reset
+    unsigned long elapsedTimeLinear = millis() - phaseStartTimeLinear;
+    
+    // Case 2: Timing cycle that matches leg timing - no movement, just waiting
+    debug_print("BASE Case 2 handler: elapsed=");
+    debug_print(elapsedTimeLinear);
+    debug_print("ms, target=");
+    debug_println(CASE2_CYCLE_TIME);
+    
+    if (elapsedTimeLinear < CASE2_CYCLE_TIME) {  // Use variable for timing cycle
+      linearY = 0;  // No movement during timing cycle
+    } else {
+      linearY = 0;  // Still no movement
+      wasLinearYActive = false;  // Reset the state
+      isCase2InProgress = false;  // Mark case 2 timing cycle as completed
+      isCase2Locked = true;  // NOW lock the system for case 3
+      debug_print("BASE Case 2 handler timing completed after ");
+      debug_print(elapsedTimeLinear);
+      debug_println("ms - LOCKED for case 3");
+    }
 
-  } else if (angular != 0 && linearY == 0) {
+    lastLinearCommand = command;
+    moveRobot(0, 0);  // No movement during case 2
+    
+  } else if (command == 0) {
+    // Command 0: Idle - Don't interrupt case 2 lock
+    if (isCase2Locked) {
+      debug_println("BASE Case 2 locked - ignoring idle command");
+      lastLinearCommand = command;
+      moveRobot(0, 0);
+      return;
+    }
+    
+    // Commands 0: Stop the base (no movement)
+    wasLinearYActive = false;
+    wasAngularActive = false;
+    pendingCase3 = false;     // Clear any pending case 3
+    pendingAngular = 0.0;     // Clear any pending angular value
+    lastLinearCommand = command;
+    moveRobot(0, angular);  // Keep angular for turning, but stop linear movement
+    
+  } else if (angular != 0 && (command == 0 || command == 2 || command == 3)) {
+    // Handle angular movement (turning) - works with commands 0, 2, 3 (not 1, as it has its own movement profile)
+    if (!wasAngularActive) {
+      phaseStartTimeAngular = millis();  // Reset timer for angular when it becomes active
+      wasAngularActive = true;
+      wasLinearYActive = false;
+      angularDirectionPositive = angular > 0; // Store direction of angular movement
+    }
+    
+    // Calculate elapsed time for angular movement
+    unsigned long elapsedTimeAngular = millis() - phaseStartTimeAngular;
+    
     // Angular movement profile
     if (angularDirectionPositive) {
       if (elapsedTimeAngular < 500) {
@@ -271,21 +617,13 @@ void updateBaseMovementByTime(float linearY, float angular) {
       }
     }
 
-    moveRobot(linearY, angular);
-
-  } else if (linearY != 0 && angular != 0) {
-    // Handle intermediate situation: when both are non-zero from the start
-    if (!wasLinearYActive && !wasAngularActive) {
-      linearY = 0;
-      angular = 0;
-    } else if (wasLinearYActive && !wasAngularActive) {
-      angular = 0;  // If linearY was active and angular becomes non-zero, continue with linearY
-    } else if (wasAngularActive && !wasLinearYActive) {
-      linearY = 0;  // If angular was active and linearY becomes non-zero, continue with angular
-    }
-    moveRobot(linearY, angular);
+    moveRobot(0, angular);  // No linear movement, only angular
+    
   } else {
-    moveRobot(linearY, angular);
+    // Default case: stop all movement
+    wasLinearYActive = false;
+    wasAngularActive = false;
+    moveRobot(0, 0);
   }
 }
 

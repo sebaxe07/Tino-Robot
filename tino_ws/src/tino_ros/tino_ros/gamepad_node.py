@@ -45,6 +45,19 @@ class GamepadNode(Node):
         self.hx = 511.0  # Head X
         self.hy = 511.0  # Head Y
         
+        # Button states for leg commands
+        self.leg_command = 0  # 0=idle, 1=little push (X), 2=forward only (Y), 3=finish cycle (B)
+        
+        # Pulse control for leg commands
+        self.leg_command_pulse_count = 0  # Counter for pulse transmission
+        self.leg_command_pulse_target = -1  # Target command to pulse (-1 means no pulse active)
+        self.pulse_duration = 3  # Number of times to send the command
+        
+        # Pulse control for rotation (bumpers)
+        self.bb_pulse_count = 0  # Counter for rotation pulse transmission
+        self.bb_pulse_target = 0.0  # Target rotation value to pulse (0.0 means no pulse active)
+        self.bb_pulse_duration = 3  # Number of times to send the rotation
+        
         # Status flags
         self.is_running = True
         self.gamepad_connected = False
@@ -58,6 +71,21 @@ class GamepadNode(Node):
         self.gamepad_thread.start()
         
         self.get_logger().info(f"Gamepad node initialized, using device: {self.gamepad_device}")
+    
+    def trigger_leg_command_pulse(self, command):
+        """Trigger a pulse for the specified leg command"""
+        self.leg_command_pulse_target = command
+        self.leg_command_pulse_count = 0
+        self.leg_command = command
+        self.get_logger().info(f"Triggering leg command pulse: {command}")
+    
+    def trigger_rotation_pulse(self, rotation_value):
+        """Trigger a pulse for the specified rotation value with command 3"""
+        self.bb_pulse_target = rotation_value
+        self.bb_pulse_count = 0
+        self.bb = rotation_value
+        self.trigger_leg_command_pulse(3)  # Also trigger case 3
+        self.get_logger().info(f"Triggering rotation pulse: {rotation_value} + Leg command pulse: 3")
     
     def normalize_input(self, value, axis_type):
         """Normalize X-input values to match the expected ranges in the code"""
@@ -111,26 +139,7 @@ class GamepadNode(Node):
 
                     # Process gamepad events
                     if event.type == ecodes.EV_ABS:
-                        if event.code == 1:  # BF button / Left stick Y-axis
-                            raw_value = event.value
-                            
-                            if self.is_neutral(raw_value, "left_y"):
-                                self.bf = 0.0
-                            else:
-                                # In X-input mode, the Y axis is inverted (-32768 is down/forward, +32767 is up/backward)
-                                # So we need to invert the sign for consistent behavior
-                                if self.x_input_mode:
-                                    normalized = self.normalize_input(raw_value, "left_y")
-                                    # Forward motion (negative in X-input) maps to positive in our system
-                                    if raw_value < 0:
-                                        self.bf = self.map_range(normalized, self.d_input_range[0], 120, 15, 0)
-                                    else:
-                                        self.bf = self.map_range(normalized, 130, self.d_input_range[1], 0, -15)
-                                else:
-                                    # Original D-input code
-                                    self.bf = self.map_range(event.value, 130, 255, 0, 0) if event.value > 130 else self.map_range(event.value, 0, 120, 15, 0)
-                        
-                        elif event.code == 4 and event.type == 3:  # HY - Right stick Y
+                        if event.code == 4 and event.type == 3:  # HY - Right stick Y
                             raw_value = event.value
                             
                             if self.is_neutral(raw_value, "right_y"):
@@ -165,11 +174,34 @@ class GamepadNode(Node):
                         elif event.code == 17:  # HP
                             self.hp = -335 if event.value < 0 else (335 if event.value > 0 else 0)
                             
-                    # Bumpers
-                    elif event.code == 311:  # BB button right
-                        self.bb = -1.1 if event.value == 1 else 0.0
-                    elif event.code == 310:  # BB button left
-                        self.bb = 1.1 if event.value == 1 else 0.0
+                    # Face buttons for leg commands
+                    elif event.type == ecodes.EV_KEY:
+                        # Bumpers - send rotation + command 3 with pulse system
+                        if event.code == 311:  # BB button right
+                            if event.value == 1:  # Button pressed
+                                self.trigger_rotation_pulse(-1.1)  # Trigger rotation pulse with command 3
+                                self.get_logger().info("Right bumper pressed - Triggering rotation pulse: -1.1 + command 3")
+                        elif event.code == 310:  # BB button left
+                            if event.value == 1:  # Button pressed
+                                self.trigger_rotation_pulse(1.1)  # Trigger rotation pulse with command 3
+                                self.get_logger().info("Left bumper pressed - Triggering rotation pulse: 1.1 + command 3")
+                        # Face buttons for leg commands
+                        elif event.code == 307:  # X button
+                            if event.value == 1:  # Button pressed
+                                self.trigger_leg_command_pulse(1)  # Little push
+                                self.get_logger().info("X button pressed - Leg command pulse: Little push (1)")
+                        elif event.code == 308:  # Y button  
+                            if event.value == 1:  # Button pressed
+                                self.trigger_leg_command_pulse(2)  # Forward only
+                                self.get_logger().info("Y button pressed - Leg command pulse: Forward only (2)")
+                        elif event.code == 305:  # B button
+                            if event.value == 1:  # Button pressed
+                                self.trigger_leg_command_pulse(3)  # Finish cycle
+                                self.get_logger().info("B button pressed - Leg command pulse: Finish cycle (3)")
+                        elif event.code == 304:  # A button - Reset to idle
+                            if event.value == 1:  # Button pressed
+                                self.trigger_leg_command_pulse(0)  # Idle
+                                self.get_logger().info("A button pressed - Leg command pulse: Idle (0)")
 
 
                 gamepad.close()
@@ -189,9 +221,33 @@ class GamepadNode(Node):
     
     def publish_commands(self):
         """Timer callback to publish command messages"""
+        # Handle leg command pulse logic
+        if self.leg_command_pulse_count < self.pulse_duration and self.leg_command_pulse_target != -1:
+            # Continue sending the pulse command
+            self.leg_command = self.leg_command_pulse_target
+            self.leg_command_pulse_count += 1
+            
+            if self.leg_command_pulse_count >= self.pulse_duration:
+                # Pulse complete, reset to idle
+                self.leg_command = 0
+                self.leg_command_pulse_target = -1  # Mark pulse as complete
+                self.get_logger().info(f"Leg command pulse complete, returning to idle")
+        
+        # Handle rotation pulse logic (bumpers)
+        if self.bb_pulse_count < self.bb_pulse_duration and self.bb_pulse_target != 0.0:
+            # Continue sending the pulse rotation
+            self.bb = self.bb_pulse_target
+            self.bb_pulse_count += 1
+            
+            if self.bb_pulse_count >= self.bb_pulse_duration:
+                # Pulse complete, reset to idle
+                self.bb = 0.0
+                self.bb_pulse_target = 0.0  # Mark pulse as complete
+                self.get_logger().info(f"Rotation pulse complete, returning to idle")
+        
         # Publish base velocity command
         base_cmd = Twist()
-        base_cmd.linear.x = float(self.bf)  # Forward/backward
+        base_cmd.linear.x = float(self.leg_command)  # Send leg command instead of forward/backward
         base_cmd.angular.z = float(self.bb)  # Rotation
         self.cmd_vel_pub.publish(base_cmd)
         

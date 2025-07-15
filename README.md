@@ -167,9 +167,26 @@ The Tino ROS2 system consists of several interconnected nodes:
 
 4. Control the robot using the gamepad:
 
-   - Left stick: Base forward movement
-   - Bumper buttons: Base rotation
-   - Right stick: Head pan/tilt
+   **Base Movement:**
+   - Bumper buttons (L1/R1): Atomic rotation movements with automatic case 3 execution
+     - Left bumper: Counter-clockwise rotation + case 3
+     - Right bumper: Clockwise rotation + case 3
+
+   **Head Control:**
+   - Right stick: Head pan/tilt movement
+   - D-pad up/down: Head pitch adjustment
+
+   **Leg Control (Atomic Movement System):**
+   - X button: Little push movement (case 1)
+   - Y button: Forward movement until maximum reach (case 2)
+   - B button: Finish cycle and return to neutral (case 3)
+   - A button: Return to idle state (case 0)
+
+   **Advanced Control Logic:**
+   - Case 2 must be executed before case 3 can be triggered
+   - All movements are atomic (must complete once started)
+   - Pending system: case 3 commands received during case 2 are stored and executed automatically
+   - Pulse system: each button press sends a 3-cycle command pulse
 
 5. To stop the system, press Ctrl+C in the terminal
 
@@ -266,15 +283,74 @@ The Tino ROS2 system consists of several interconnected nodes:
 
 7. Control the robot.
 
+## Modern Control System
+
+### Atomic Movement Architecture
+
+The current implementation features an advanced atomic movement system that ensures coordinated operation between the base and leg components:
+
+#### Movement States and Commands
+
+**Base Controller:**
+- **Case 1**: Little push movement (600ms delay + 200ms forward + 200ms backward)
+- **Case 2**: Timing synchronization cycle (1.5 seconds, locks system for case 3)
+- **Case 3**: Atomic movements that require case 2 completion:
+  - `(3, 0)`: Forward movement (1.7 seconds)
+  - `(3, 1)`: Right rotation (1.7 seconds)
+  - `(3, -1)`: Left rotation (1.7 seconds)
+
+**Leg Controller:**
+- **Case 1**: Little push movement (optimized 3-phase: 50% forward, 5% stop, 45% return)
+- **Case 2**: Forward movement until maximum extension with locking mechanism
+- **Case 3**: Return to neutral position (button-press completion detection)
+
+#### Synchronization Features
+
+**Locking System:**
+- Case 2 execution locks the system, preventing other commands
+- Only case 3 can unlock the system after case 2 completion
+- Ensures coordinated leg extension before base movement
+
+**Pending Command System:**
+- Commands received during case 2 are stored and executed automatically
+- Supports pending forward movement and rotation commands
+- Maintains command sequence integrity
+
+**Pulse System:**
+- Each button press generates a 3-cycle command pulse
+- Automatic return to idle after pulse completion
+- Consistent behavior regardless of button hold duration
+
+### Gamepad Integration
+
+The gamepad interface implements a sophisticated control scheme:
+
+- **Rotation + Case 3**: Bumper buttons simultaneously trigger rotation and leg coordination
+- **Atomic Leg Movements**: Face buttons control precise leg positioning
+- **Real-time Feedback**: Debug output provides system state information
+
 ## Communication Protocol
 
 The Arduino modules and controllers communicate using a simple serial protocol with key-value pairs:
 
-- `BF`: Base Forward motion
-- `BB`: Base angular (rotation) motion
+**Basic Commands:**
+- `BF`: Base Forward motion and leg command selector (0=idle, 1=little push, 2=forward, 3=finish cycle)
+- `BB`: Base angular motion (rotation values and pulse system)
 - `HP`: Head Pitch
 - `HX`: Head X-axis (pan)
 - `HY`: Head Y-axis (tilt)
+
+**Advanced Command Combinations:**
+- `BF=3, BB=0`: Forward movement (case 3,0)
+- `BF=3, BB=1`: Right rotation (case 3,1) 
+- `BF=3, BB=-1`: Left rotation (case 3,-1)
+- `BF=2, BB=0`: Synchronization timing cycle (case 2)
+
+**Command Flow Example:**
+1. Press Y button → `BF=2` (case 2 timing cycle starts)
+2. Press left bumper during case 2 → command stored as pending
+3. Case 2 completes → automatically executes `BF=3, BB=-1` (left rotation)
+4. Movement completes → returns to `BF=0, BB=0` (idle)
 
 ## Notes
 

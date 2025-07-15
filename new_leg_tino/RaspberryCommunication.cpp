@@ -12,7 +12,7 @@ float lastSpeedCommandPrev = 0;  // Variabile per memorizzare l'ultimo comando d
 
 
 void write_serial(String msg) {
-  Serial.println(msg);
+  //Serial.println(msg);
 }
 
 void message_response(KeyValueMsg keyValueMsg){
@@ -84,21 +84,21 @@ void split_msg(String msg) {
 }
 
 bool read_serial() {
-  Serial.println("Reading from serial...");
+  //Serial.println("Reading from serial...");
   if (Serial.available() > 0) {
-    Serial.println("Data available to read.");
+    //Serial.println("Data available to read.");
     current_data = Serial.readStringUntil('\n');
-    Serial.println("Data read");
+    //Serial.println("Data read");
     return true;
   }
   else {
-    Serial.println("No data available to read.");
+    //Serial.println("No data available to read.");
     return false;
   }
 }
 
 bool read_key_value_serial(){
-  Serial.println("Reading key-value pair from serial...");
+  //Serial.println("Reading key-value pair from serial...");
   if (read_serial()){
     split_msg(current_data);
     return true;

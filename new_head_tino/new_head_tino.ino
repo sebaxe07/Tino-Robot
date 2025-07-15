@@ -176,169 +176,7 @@ void moveHead(float move_up, float move_right, float move_left) {
   servoC.writeMicroseconds(c);
 }
 
-void moveHeadBase(float move_forward, float move_angular) {
-  const float amplitude = 335.0;
-  const float maxFrequency_A = 45;
-  const float minFrequency_B = 0.0;
-  const float maxFrequency_B = 100;
-  const float returnSpeed = 0.05;
 
-  static unsigned long lastTime = 0;
-  static float phase_A = 0.0;
-  static float phase_BC = 0.0;
-  static bool returningToInitial_A = false;
-  static bool returningToInitial_BC = false;
-
-  unsigned long currentTime = millis();
-  float deltaTime = (currentTime - lastTime) / 1000.0;
-  lastTime = currentTime;
-
-  static unsigned long phaseStartTime = 0;
-  
-  // Special case: If move_forward is exactly 42, trigger circular motion mode
-  // (Using 42 as a special value that wouldn't normally be sent)
-  if (move_forward == 42) {
-    // Call the circular motion function
-    moveHeadCircular();
-    return;
-  }
-
-  if (move_forward != 0 && move_angular == 0 && move_forward != 42) {
-    returningToInitial_A = false;
-    returningToInitial_BC = true;
-
-    unsigned long elapsedPhaseTime = currentTime - phaseStartTime;
-    float frequency_A = maxFrequency_A;
-
-    if (elapsedPhaseTime < 1000) {
-      frequency_A = maxFrequency_A - 5;
-    } else if (elapsedPhaseTime < 1400) {  //quando questo finisce, dev'essere più vicino possibile alla initial position-> regola il tempo in base a questo 
-      frequency_A = 2 * maxFrequency_A ;
-    } else if (elapsedPhaseTime < 2980) {  //quando questo finisce, dev'essere più vicino possibile alla initial position-> regola il tempo in base a questo 
-      frequency_A = maxFrequency_A - 27;
-    } else {
-      phaseStartTime = currentTime;  // Restart phase timer
-      lastTime = currentTime;  // Reset deltaTime to avoid inconsistencies
-      return;
-    }
-
-    phase_A += 2 * PI * frequency_A / 100 * deltaTime;
-    phase_A = fmod(phase_A, 2 * PI);
-
-    a_fb = -amplitude * sin(phase_A);
-    b_fb = -a_fb;
-    c_br = -a_fb;
-
-    a_0 = a_min + amplitude;
-    b_0 = b_min + amplitude;
-    c_0 = c_min + amplitude;
-
-    a = constrain(a_0 + a_fb + k, a_min, a_max);
-    b = constrain(b_0 + b_fb + b_bl + k, b_min, b_max);
-    c = constrain(c_0 + c_br + k, c_min, c_max);
-
-    servoA.writeMicroseconds(a);
-    servoB.writeMicroseconds(b);
-    servoC.writeMicroseconds(c);
-  }
-
-  else if (move_angular != 0 && move_forward == 0) {
-    returningToInitial_BC = false;
-    returningToInitial_A = true;
-
-    float absPotValue_B = abs(move_angular);
-    float frequency_BC = minFrequency_B + (absPotValue_B / 1.1) * (maxFrequency_B - minFrequency_B);
-
-    phase_BC += 2 * PI * frequency_BC / 100 * deltaTime;
-    phase_BC = fmod(phase_BC, 2 * PI);
-
-    if (move_angular > 0) {
-      b_fb = b_min;
-      c_br = -amplitude * sin(phase_BC);
-    } else {
-      b_fb = -amplitude * sin(phase_BC);
-      c_br = c_min;
-    }
-
-    a_fb = 0;
-
-    b_0 = b_min + amplitude;
-    c_0 = c_min + amplitude;
-
-    b = constrain(b_0 + b_fb + b_bl + k, b_min, b_max);
-    c = constrain(c_0 + c_br + k, c_min, c_max);
-
-    servoA.writeMicroseconds(a_min + theta45);
-    servoB.writeMicroseconds(b);
-    servoC.writeMicroseconds(c);
-  }
-
-  if (move_forward == 0 && move_angular == 0) {
-    if (!returningToInitial_A) {
-      returningToInitial_A = true;
-      phase_A = 0;
-    }
-    if (!returningToInitial_BC) {
-      returningToInitial_BC = true;
-      phase_BC = 0;
-    }
-
-    a = servoA.readMicroseconds();
-    b = servoB.readMicroseconds();
-    c = servoC.readMicroseconds();
-
-    a = a + (a_min + theta45 - a) * returnSpeed;
-    b = b + (b_min + theta45 - b) * returnSpeed;
-    c = c + (c_min + theta45 - c) * returnSpeed;
-
-    servoA.writeMicroseconds(a);
-    servoB.writeMicroseconds(b);
-    servoC.writeMicroseconds(c);
-  }
-
-  a_deg = map(a, 1220, 1890, 90, 0);
-  b_deg = map(b, 1220, 1890, 90, 0);
-  c_deg = map(c, 1220, 1890, 90, 0);
-}
-
-// New function to make servos move in a circular pattern
-void moveHeadCircular() {
-  const float amplitude = 335.0;  // Same amplitude as in other functions
-  const float period = 3000;      // Time for a complete circle (in ms)
-  const float phase_offset = 2 * PI / 3;  // 120 degrees offset between servos
-  
-  // Get current time
-  unsigned long currentTime = millis();
-  
-  // Calculate phase based on time (0 to 2π)
-  float phase = fmod((float)currentTime / period * 2 * PI, 2 * PI);
-  
-  // Calculate position for each servo with phase offset for circular motion
-  // Using sine and cosine to create circular movement
-  a_fb = -amplitude * sin(phase);
-  b_fb = -amplitude * sin(phase + phase_offset);
-  c_br = -amplitude * sin(phase + 2 * phase_offset);
-  
-  // Base angles (center position)
-  a_0 = a_min + theta45;
-  b_0 = b_min + theta45;
-  c_0 = c_min + theta45;
-  
-  // Calculate and constrain final positions
-  a = constrain(a_0 + a_fb, a_min, a_max);
-  b = constrain(b_0 + b_fb, b_min, b_max);
-  c = constrain(c_0 + c_br, c_min, c_max);
-  
-  // Write to servos
-  servoA.writeMicroseconds(a);
-  servoB.writeMicroseconds(b);
-  servoC.writeMicroseconds(c);
-  
-  // Convert to degrees for debugging (if needed)
-  a_deg = map(a, 1220, 1890, 90, 0);
-  b_deg = map(b, 1220, 1890, 90, 0);
-  c_deg = map(c, 1220, 1890, 90, 0);
-}
 
 void serial_loop() {
   now = millis();
@@ -360,35 +198,21 @@ void serial_loop() {
     debug_print(" HX:");
     debug_print(lastSpeedCommand[1]);
     debug_print(" HY:");
-    debug_print(lastSpeedCommand[2]);
-    debug_print(" BF:");
-    debug_print(lastSpeedCommand[3]);
-    debug_print(" BB:");
-    debug_println(lastSpeedCommand[4]);
+    debug_println(lastSpeedCommand[2]);
 
-    // Controlliamo se moveHeadBase è attivo
-    bool moveHeadBaseActive = (lastSpeedCommand[3] != 0 || lastSpeedCommand[4] != 0);
+    // Only use direct head control - HF (pitch), HX (pan), HY (tilt)
     bool moveHeadActive = (lastSpeedCommand[0] != 0 || lastSpeedCommand[1] != 511 || lastSpeedCommand[2] != 511);
     
-    // Special command for circular motion (using lastSpeedCommand[5])
-    bool circularMotionActive = (lastSpeedCommand[5] == 1);
-
-    // Print which command path we're taking
-    if (circularMotionActive) {
-      debug_println("Executing: Circular Motion");
-      moveHeadCircular();
-    }
-    else if (moveHeadBaseActive) {
-      debug_println("Executing: Head Base Motion");
-      moveHeadBase(lastSpeedCommand[3], lastSpeedCommand[4]);
-    }
-    else if (moveHeadActive) {
+    if (moveHeadActive) {
       debug_println("Executing: Direct Head Control");
       moveHead(lastSpeedCommand[0], lastSpeedCommand[1], lastSpeedCommand[2]);
     }
     else {
       debug_println("Executing: Reset to Neutral");
-      moveHeadBase(0, 0);  // Reset to neutral position
+      // Reset to neutral position
+      servoA.writeMicroseconds(a_min + theta45);
+      servoB.writeMicroseconds(b_min + theta45);
+      servoC.writeMicroseconds(c_min + theta45);
     }
   }
 

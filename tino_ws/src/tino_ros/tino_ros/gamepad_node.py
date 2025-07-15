@@ -77,7 +77,6 @@ class GamepadNode(Node):
         self.leg_command_pulse_target = command
         self.leg_command_pulse_count = 0
         self.leg_command = command
-        self.get_logger().info(f"Triggering leg command pulse: {command}")
     
     def trigger_rotation_pulse(self, rotation_value):
         """Trigger a pulse for the specified rotation value with command 3"""
@@ -85,7 +84,6 @@ class GamepadNode(Node):
         self.bb_pulse_count = 0
         self.bb = rotation_value
         self.trigger_leg_command_pulse(3)  # Also trigger case 3
-        self.get_logger().info(f"Triggering rotation pulse: {rotation_value} + Leg command pulse: 3")
     
     def normalize_input(self, value, axis_type):
         """Normalize X-input values to match the expected ranges in the code"""
@@ -180,28 +178,22 @@ class GamepadNode(Node):
                         if event.code == 311:  # BB button right
                             if event.value == 1:  # Button pressed
                                 self.trigger_rotation_pulse(-1.1)  # Trigger rotation pulse with command 3
-                                self.get_logger().info("Right bumper pressed - Triggering rotation pulse: -1.1 + command 3")
                         elif event.code == 310:  # BB button left
                             if event.value == 1:  # Button pressed
                                 self.trigger_rotation_pulse(1.1)  # Trigger rotation pulse with command 3
-                                self.get_logger().info("Left bumper pressed - Triggering rotation pulse: 1.1 + command 3")
                         # Face buttons for leg commands
                         elif event.code == 307:  # X button
                             if event.value == 1:  # Button pressed
                                 self.trigger_leg_command_pulse(1)  # Little push
-                                self.get_logger().info("X button pressed - Leg command pulse: Little push (1)")
                         elif event.code == 308:  # Y button  
                             if event.value == 1:  # Button pressed
                                 self.trigger_leg_command_pulse(2)  # Forward only
-                                self.get_logger().info("Y button pressed - Leg command pulse: Forward only (2)")
                         elif event.code == 305:  # B button
                             if event.value == 1:  # Button pressed
                                 self.trigger_leg_command_pulse(3)  # Finish cycle
-                                self.get_logger().info("B button pressed - Leg command pulse: Finish cycle (3)")
                         elif event.code == 304:  # A button - Reset to idle
                             if event.value == 1:  # Button pressed
                                 self.trigger_leg_command_pulse(0)  # Idle
-                                self.get_logger().info("A button pressed - Leg command pulse: Idle (0)")
 
 
                 gamepad.close()
@@ -231,7 +223,6 @@ class GamepadNode(Node):
                 # Pulse complete, reset to idle
                 self.leg_command = 0
                 self.leg_command_pulse_target = -1  # Mark pulse as complete
-                self.get_logger().info(f"Leg command pulse complete, returning to idle")
         
         # Handle rotation pulse logic (bumpers)
         if self.bb_pulse_count < self.bb_pulse_duration and self.bb_pulse_target != 0.0:
@@ -243,7 +234,6 @@ class GamepadNode(Node):
                 # Pulse complete, reset to idle
                 self.bb = 0.0
                 self.bb_pulse_target = 0.0  # Mark pulse as complete
-                self.get_logger().info(f"Rotation pulse complete, returning to idle")
         
         # Publish base velocity command
         base_cmd = Twist()

@@ -86,15 +86,4 @@ def generate_launch_description():
             output='screen'
         ),
         
-        # Start the ROS TCP Endpoint server for Unity
-        Node(
-            package='ros_tcp_endpoint',
-            executable='default_server_endpoint',
-            name='tcp_endpoint',
-            parameters=[{
-                'ROS_IP': '192.168.0.105'
-            }],
-            output='screen'
-        ),
-        
     ])

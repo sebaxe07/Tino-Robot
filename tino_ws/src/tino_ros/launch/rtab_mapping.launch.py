@@ -63,8 +63,7 @@ def generate_launch_description():
         Node(
             package='rtabmap_slam', executable='rtabmap', output='screen',
             parameters=parameters,
-            remappings=remappings,
-            arguments=['--delete_db_on_start']),
+            remappings=remappings),
             
         # Visualization
         Node(

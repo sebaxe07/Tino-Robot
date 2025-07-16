@@ -5,6 +5,8 @@ from geometry_msgs.msg import Twist, PoseWithCovarianceStamped, PoseStamped, Pos
 from visualization_msgs.msg import MarkerArray
 import numpy as np
 import subprocess  # Add this import for audio setup
+import math
+from std_srvs.srv import Empty
 
 class RobotControllerNode(Node):
     def __init__(self):
@@ -36,7 +38,7 @@ class RobotControllerNode(Node):
         # Subscribe to localization pose from rtabmap
         self.pose_sub = self.create_subscription(
             PoseWithCovarianceStamped,
-            '/localization_pose', 
+            '/localization_pose',   
             self.pose_callback,
             10)
         
@@ -59,6 +61,10 @@ class RobotControllerNode(Node):
             self.human_skeleton_poses_callback,
             10)
         
+        
+        # Create a client for the reset odometry service
+        self.reset_odom_client = self.create_client(Empty, '/reset_odom')
+        
         # Subscribe to VR commands
         self.vr_cmd_sub = self.create_subscription(
             Twist, '/vr_out/cmd_vel', self.vr_cmd_callback, 10)
@@ -78,6 +84,12 @@ class RobotControllerNode(Node):
         # Store the latest pose information
         self.current_pose = None
         self.pose_received = False
+        
+        # Store last 5 positions for tracking validation
+        self.position_history = []
+        self.max_history_size = 5
+        self.tracking_lost = False
+        self.position_tolerance = 1.0  # ±1 meter tolerance for x and y
         
         # Store the latest human position information
         self.human_position = None
@@ -102,31 +114,136 @@ class RobotControllerNode(Node):
         
     def pose_callback(self, msg):
         """Process incoming localization pose data"""
-        self.current_pose = msg
-        self.pose_received = True
+        position = msg.pose.pose.position
+        orientation = msg.pose.pose.orientation
         
+        # Check for the specific values indicating lost odometry
+        if (orientation.x == 1.0 and orientation.y == 0.0 and orientation.z == 0.0 and orientation.w == 0.0):
+            self.get_logger().warn('Detected odometry loss! Attempting to reset odometry...')
+            self.tracking_lost = True
+            self.reset_odometry()
+            return  # Don't process this pose
+        
+        # If tracking was lost, check if the new position is reasonable
+        if self.tracking_lost:
+            if not self._is_position_reasonable(position):
+                self.get_logger().debug(f'Position not reasonable after tracking loss: ({position.x:.2f}, {position.y:.2f}), skipping...')
+                return  # Don't process this pose
+            else:
+                self.get_logger().info('Tracking recovered! Position is reasonable, resuming pose publishing.')
+                self.tracking_lost = False
+        
+        # Store position in history (before rotation)
+        self._update_position_history(position)
+        
+        # Apply 60-degree rotation to align with map orientation
+        rotated_msg = self._apply_rotation_to_pose(msg, 20.0)
+        
+        self.current_pose = rotated_msg
+        self.pose_received = True
+
         # Log first pose received and then periodically
         if not hasattr(self, 'pose_count'):
             self.pose_count = 0
-            self.get_logger().info('First localization pose received')
+            self.get_logger().info('First localization pose received (with 20° rotation applied)')
             ## Log the initial pose
-            pos = msg.pose.pose.position
-            ori = msg.pose.pose.orientation
+            pos = rotated_msg.pose.pose.position
+            ori = rotated_msg.pose.pose.orientation
             self.get_logger().info(
-                f'Initial Pose: Position ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f}), '
+                f'Initial Rotated Pose: Position ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f}), '
                 f'Orientation ({ori.x:.2f}, {ori.y:.2f}, {ori.z:.2f}, {ori.w:.2f})'
             )
         
         self.pose_count += 1
-        pos = msg.pose.pose.position
-        ori = msg.pose.pose.orientation
+        pos = rotated_msg.pose.pose.position
+        ori = rotated_msg.pose.pose.orientation
         # self.get_logger().info(
         #     f'Pose update: Position ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f}), '
         #     f'Orientation ({ori.x:.2f}, {ori.y:.2f}, {ori.z:.2f}, {ori.w:.2f})'
         # )
 
-        self.pose_pub.publish(msg)
+        self.pose_pub.publish(rotated_msg)
     
+    def _apply_rotation_to_pose(self, pose_msg, rotation_degrees):
+        """
+        Apply a rotation around the Z-axis to the pose
+        
+        Args:
+            pose_msg: PoseWithCovarianceStamped message
+            rotation_degrees: Rotation angle in degrees around Z-axis
+            
+        Returns:
+            PoseWithCovarianceStamped: Rotated pose message
+        """
+        # Create a copy of the message
+        rotated_msg = PoseWithCovarianceStamped()
+        rotated_msg.header = pose_msg.header
+        rotated_msg.pose.covariance = pose_msg.pose.covariance
+        
+        # Convert rotation angle to radians
+        rotation_rad = math.radians(rotation_degrees)
+        
+        # Get original pose
+        orig_pose = pose_msg.pose.pose
+        
+        # Apply rotation to position (rotate around Z-axis)
+        cos_theta = math.cos(rotation_rad)
+        sin_theta = math.sin(rotation_rad)
+        
+        # Rotate position
+        rotated_msg.pose.pose.position.x = (orig_pose.position.x * cos_theta - 
+                                           orig_pose.position.y * sin_theta)
+        rotated_msg.pose.pose.position.y = (orig_pose.position.x * sin_theta + 
+                                           orig_pose.position.y * cos_theta)
+        rotated_msg.pose.pose.position.z = orig_pose.position.z
+        
+        # Create rotation quaternion for Z-axis rotation
+        rotation_quat_z = math.sin(rotation_rad / 2.0)
+        rotation_quat_w = math.cos(rotation_rad / 2.0)
+        
+        # Apply rotation to orientation (quaternion multiplication)
+        # Original quaternion
+        q1_x, q1_y, q1_z, q1_w = (orig_pose.orientation.x, orig_pose.orientation.y, 
+                                   orig_pose.orientation.z, orig_pose.orientation.w)
+        
+        # Rotation quaternion (around Z-axis)
+        q2_x, q2_y, q2_z, q2_w = 0.0, 0.0, rotation_quat_z, rotation_quat_w
+        
+        # Quaternion multiplication: result = q2 * q1
+        rotated_msg.pose.pose.orientation.x = (q2_w * q1_x + q2_x * q1_w + 
+                                              q2_y * q1_z - q2_z * q1_y)
+        rotated_msg.pose.pose.orientation.y = (q2_w * q1_y - q2_x * q1_z + 
+                                              q2_y * q1_w + q2_z * q1_x)
+        rotated_msg.pose.pose.orientation.z = (q2_w * q1_z + q2_x * q1_y - 
+                                              q2_y * q1_x + q2_z * q1_w)
+        rotated_msg.pose.pose.orientation.w = (q2_w * q1_w - q2_x * q1_x - 
+                                              q2_y * q1_y - q2_z * q1_z)
+        
+        return rotated_msg
+    def reset_odometry(self):
+        """Call the reset_odom service to reset the odometry"""
+        # Check if service is available
+        if not self.reset_odom_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().error('Reset odometry service not available')
+            return
+            
+        # Create request
+        request = Empty.Request()
+        
+        # Call service
+        future = self.reset_odom_client.call_async(request)
+        
+        # Add callback for when the service call is completed
+        future.add_done_callback(self.reset_odometry_callback)
+    
+    def reset_odometry_callback(self, future):
+        """Callback for reset_odometry service response"""
+        try:
+            future.result()
+            self.get_logger().info('Successfully reset odometry')
+        except Exception as e:
+            self.get_logger().error(f'Service call failed: {str(e)}')
+
     def human_position_callback(self, msg):
         """Process incoming human position data"""
         self.human_position = msg
@@ -265,6 +382,56 @@ class RobotControllerNode(Node):
         except Exception as e:
             self.get_logger().error(f'Error checking audio setup: {str(e)}')
             self.get_logger().warn('Audio features may not work correctly')
+
+    def _update_position_history(self, position):
+        """
+        Update the position history with the latest position
+        
+        Args:
+            position: geometry_msgs.msg.Point - The position to add to history
+        """
+        # Add current position to history
+        self.position_history.append((position.x, position.y))
+        
+        # Keep only the last max_history_size positions
+        if len(self.position_history) > self.max_history_size:
+            self.position_history.pop(0)
+            
+        self.get_logger().debug(f'Position history updated: {len(self.position_history)} positions stored')
+    
+    def _is_position_reasonable(self, position):
+        """
+        Check if the given position is reasonable compared to recent history
+        
+        Args:
+            position: geometry_msgs.msg.Point - The position to validate
+            
+        Returns:
+            bool: True if position is reasonable, False otherwise
+        """
+        if not self.position_history:
+            # No history yet, accept the position
+            self.get_logger().debug('No position history available, accepting position')
+            return True
+            
+        # Check if the position is within tolerance of any recent position
+        for hist_x, hist_y in self.position_history:
+            x_diff = abs(position.x - hist_x)
+            y_diff = abs(position.y - hist_y)
+            
+            if x_diff <= self.position_tolerance and y_diff <= self.position_tolerance:
+                self.get_logger().debug(
+                    f'Position ({position.x:.2f}, {position.y:.2f}) is reasonable '
+                    f'(within {self.position_tolerance}m of ({hist_x:.2f}, {hist_y:.2f}))'
+                )
+                return True
+        
+        # Position is not close to any recent position
+        self.get_logger().debug(
+            f'Position ({position.x:.2f}, {position.y:.2f}) is NOT reasonable. '
+            f'Recent positions: {self.position_history}'
+        )
+        return False
 
 def main(args=None):
     rclpy.init(args=args)

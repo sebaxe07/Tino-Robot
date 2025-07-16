@@ -264,14 +264,10 @@ class HardwareInterfaceNode(Node):
                             # Add to buffer or process complete line
                             if char == '\n':
                                 if buffer:
-                                    # Always publish to feedback topic
+                                    # Only publish to feedback topic, no console logging
                                     msg = String()
                                     msg.data = f"[{name}] {buffer}"
                                     self.feedback_pub.publish(msg)
-                                    
-                                    # Only log to console if not from HEAD Arduino
-                                    if name != "HEAD":
-                                        self.get_logger().info(f"[{name} Arduino] {buffer}")
                                     buffer = ""  # Reset buffer after processing
                             else:
                                 buffer += char

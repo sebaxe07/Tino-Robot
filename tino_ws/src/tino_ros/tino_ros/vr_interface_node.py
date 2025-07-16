@@ -24,9 +24,6 @@ class VRInterfaceNode(Node):
             '/vr_in/robot_pose', 
             self.pose_callback,
             10)
-        
-        # Create a client for the reset odometry service
-        self.reset_odom_client = self.create_client(Empty, '/reset_odom')
             
         # Subscribe to human position data
         self.human_position_sub = self.create_subscription(
@@ -81,44 +78,6 @@ class VRInterfaceNode(Node):
         # Check for the specific pose values that indicate odometry loss
         position = msg.pose.pose.position
         orientation = msg.pose.pose.orientation
-        
-        # Check for the specific values indicating lost odometry
-        if (orientation.x == 1.0 and orientation.y == 0.0 and orientation.z == 0.0 and orientation.w == 0.0):
-            self.get_logger().warn('Detected odometry loss! Attempting to reset odometry...')
-            self.reset_odometry()
-        else:
-            # Only log at debug level for position tracking
-            self.get_logger().debug(
-                f'Robot pose: position({position.x:.2f}, {position.y:.2f}, {position.z:.2f}), '
-                f'orientation({orientation.x:.2f}, {orientation.y:.2f}, {orientation.z:.2f}, {orientation.w:.2f})'
-            )
-        
-        # Send the pose data to VR system
-        # This would be implemented based on the specific VR system
-        
-    def reset_odometry(self):
-        """Call the reset_odom service to reset the odometry"""
-        # Check if service is available
-        if not self.reset_odom_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().error('Reset odometry service not available')
-            return
-            
-        # Create request
-        request = Empty.Request()
-        
-        # Call service
-        future = self.reset_odom_client.call_async(request)
-        
-        # Add callback for when the service call is completed
-        future.add_done_callback(self.reset_odometry_callback)
-    
-    def reset_odometry_callback(self, future):
-        """Callback for reset_odometry service response"""
-        try:
-            future.result()
-            self.get_logger().info('Successfully reset odometry')
-        except Exception as e:
-            self.get_logger().error(f'Service call failed: {str(e)}')
 
     def mic_audio_callback(self, msg):
         """Process audio data from microphone and send to VR system"""

@@ -414,3 +414,4 @@ The atomic movement system now guarantees that once any movement starts, it must
 As a cleanup task, we also removed the old left joystick analog control since everything now runs through the discrete 4-state button system, making the control scheme consistent with the VR approach.
 
 
+Added a system to offset the map positionbyt a desired amount of degree, this becauseits difficult to control the alignment of the SLAM map when creating it and some times it can be created with a rotation, this in principle is no problem, but given that we need to map this position directly into unity is best if we have the map aligned with the cartesian plane. This value can be changed but the process needss to be trial and error until we find a desired angle, this may change from map to map

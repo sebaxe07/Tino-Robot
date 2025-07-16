@@ -50,7 +50,7 @@ unsigned int last_serial_time = millis();
 bool isMsg = false;
 
 // Debug control - Change this to true to enable debug output
-#define DEBUG_ENABLED false  // Set to false to reduce memory usage
+#define DEBUG_ENABLED true  // Set to false to reduce memory usage
 #define DEBUG_PRINT(x) if(DEBUG_ENABLED) Serial.print(x)
 #define DEBUG_PRINTLN(x) if(DEBUG_ENABLED) Serial.println(x)
 

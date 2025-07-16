@@ -137,7 +137,7 @@ class RobotControllerNode(Node):
         self._update_position_history(position)
         
         # Apply 60-degree rotation to align with map orientation
-        rotated_msg = self._apply_rotation_to_pose(msg, 20.0)
+        rotated_msg = self._apply_rotation_to_pose(msg, 21.0)
         
         self.current_pose = rotated_msg
         self.pose_received = True

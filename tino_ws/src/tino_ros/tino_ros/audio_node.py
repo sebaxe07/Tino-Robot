@@ -105,7 +105,7 @@ class AudioNode(Node):
                 # Update orientation (-1 to 1)
                 self.orientation = max(-1.0, min(1.0, msg.data[1]))
                 
-                self.get_logger().info(f'Updated audio control: volume={self.volume}, orientation={self.orientation}')
+                # self.get_logger().info(f'Updated audio control: volume={self.volume}, orientation={self.orientation}')
             else:
                 self.get_logger().warn('Received incomplete audio control data')
                 

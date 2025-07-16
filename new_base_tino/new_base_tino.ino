@@ -9,7 +9,7 @@ void process_special_command(char* buffer);
 void send_status_update();
 
 // Debug flag - set to true to enable debug prints, false to disable
-#define DEBUG_MODE false
+#define DEBUG_MODE true
 
 // Debug print helper functions
 void debug_print(const char* message) {
@@ -341,7 +341,7 @@ void updateBaseMovementByTime(float linearY, float angular) {
           angularDirectionPositive = pendingAngular > 0; // Store direction
           debug_print("BASE Auto case 3 rotation timer started at: ");
           debug_println(phaseStartTimeAngular);
-          angular = angularDirectionPositive ? 1.1 : -1.1;  // Start rotation
+          angular = angularDirectionPositive ? -1.1 : 1.1;  // Start rotation
           debug_print("BASE Auto case 3 rotation ");
           debug_print(angularDirectionPositive ? "RIGHT" : "LEFT");
           debug_println(" movement started");
@@ -374,7 +374,7 @@ void updateBaseMovementByTime(float linearY, float angular) {
       // Angular case 3 (rotation movement)
       unsigned long elapsedTimeAngular = currentTime - phaseStartTimeAngular;
       if (elapsedTimeAngular < 1720) {
-        angular = angularDirectionPositive ? 1.1 : -1.1;  // Continue rotation
+        angular = angularDirectionPositive ? -1.1 : 1.1;  // Continue rotation
         debug_print("BASE Case 3 rotation ");
         debug_print(angularDirectionPositive ? "RIGHT" : "LEFT");
         debug_print(" in progress, elapsed: ");
@@ -476,7 +476,7 @@ void updateBaseMovementByTime(float linearY, float angular) {
       debug_println(elapsedTimeAngular);
       if (elapsedTimeAngular < 1720) {
         // Use the same duration as forward movement for consistency
-        angular = angularDirectionPositive ? 1.1 : -1.1;  // Full rotation speed
+        angular = angularDirectionPositive ? -1.1 : 1.1;  // Full rotation speed
         debug_print("BASE Case 3 rotation ");
         debug_print(angularDirectionPositive ? "RIGHT" : "LEFT");
         debug_println(" movement in progress");
@@ -530,7 +530,7 @@ void updateBaseMovementByTime(float linearY, float angular) {
     lastLinearCommand = command;
     moveRobot(linearY, angular);
     
-  } else if (command == 2 && angular == 0) {
+  } else if (command == 2) {
     // Command 2: Start timing cycle that blocks all commands (including case 3)
     if (!isCase2InProgress) {
       debug_println("BASE Starting case 2 timing cycle - blocking all commands");

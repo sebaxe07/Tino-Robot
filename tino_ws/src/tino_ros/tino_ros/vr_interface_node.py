@@ -19,6 +19,14 @@ class VRInterfaceNode(Node):
         self.declare_parameter('udp_port', 5005)
         self.declare_parameter('udp_bind_address', '0.0.0.0')
         
+        # Parameters for sending UDP data
+        self.declare_parameter('udp_send_port', 5006)
+        self.declare_parameter('udp_send_address', '127.0.0.1')
+        
+        # Parameters for sending skeleton UDP data
+        self.declare_parameter('udp_skeleton_port', 5007)
+        self.declare_parameter('udp_skeleton_address', '127.0.0.1')
+        
         log_level = self.get_parameter('log_level').get_parameter_value().string_value
         if hasattr(rclpy.logging, log_level):
             self.get_logger().set_level(getattr(rclpy.logging, log_level))
@@ -29,7 +37,8 @@ class VRInterfaceNode(Node):
             '/vr_in/robot_pose', 
             self.pose_callback,
             10)
-            
+             
+             
         # Subscribe to human position data
         self.human_position_sub = self.create_subscription(
             PoseStamped,
@@ -76,8 +85,44 @@ class VRInterfaceNode(Node):
         # Message ordering tracking
         self.last_message_order = -1
         
+        # Outgoing message order counter
+        self.outgoing_message_order = 0
+        
+        # Outgoing skeleton message order counter
+        self.skeleton_message_order = 0
+        
+        # VR client address for sending data
+        self.vr_client_address = None
+        
+        # UDP send configuration
+        self.udp_send_port = None
+        self.udp_send_address = None
+        
+        # UDP skeleton send configuration
+        self.udp_skeleton_port = None
+        self.udp_skeleton_address = None
+        
+        # Store latest data for sending
+        self.latest_robot_pose = None
+        self.latest_audio_volume = 0
+        self.latest_skeleton_data = None
+        
         # Initialize VR communication
         self.setup_vr_communication()
+        
+        # Get UDP send configuration
+        self.udp_send_port = self.get_parameter('udp_send_port').get_parameter_value().integer_value
+        self.udp_send_address = self.get_parameter('udp_send_address').get_parameter_value().string_value
+        
+        # Get UDP skeleton send configuration
+        self.udp_skeleton_port = self.get_parameter('udp_skeleton_port').get_parameter_value().integer_value
+        self.udp_skeleton_address = self.get_parameter('udp_skeleton_address').get_parameter_value().string_value
+        
+        # Create a timer to periodically send data to VR (10 Hz)
+        self.vr_send_timer = self.create_timer(0.1, self.send_data_to_vr)
+        
+        # Create a timer to periodically send skeleton data to VR (10 Hz)
+        self.skeleton_send_timer = self.create_timer(0.1, self.send_skeleton_to_vr)
         
         self.get_logger().info('VR interface node initialized with UDP communication and human skeleton tracking')
     
@@ -97,6 +142,8 @@ class VRInterfaceNode(Node):
             self.udp_thread.start()
             
             self.get_logger().info(f'UDP VR interface listening on {bind_address}:{udp_port}')
+            self.get_logger().info(f'UDP VR interface will send to {self.udp_send_address}:{self.udp_send_port}')
+            self.get_logger().info(f'UDP VR skeleton will send to {self.udp_skeleton_address}:{self.udp_skeleton_port}')
         except Exception as e:
             self.get_logger().error(f'Failed to setup UDP communication: {str(e)}')
     
@@ -108,6 +155,10 @@ class VRInterfaceNode(Node):
                 data, addr = self.udp_socket.recvfrom(1024)
                 self.get_logger().info(f'Received UDP data from {addr}')
                 self.get_logger().info(f'Data length: {len(data)} bytes') 
+                
+                # Store the VR client address for sending data back (but we'll use configured send address/port)
+                self.vr_client_address = addr
+                
                 self.process_vr_data(data, addr)
             except socket.timeout:
                 # Normal timeout, continue listening
@@ -238,12 +289,18 @@ class VRInterfaceNode(Node):
         # Check for the specific pose values that indicate odometry loss
         position = msg.pose.pose.position
         orientation = msg.pose.pose.orientation
+        
+        # Store the latest robot pose
+        self.latest_robot_pose = msg
 
     def mic_audio_callback(self, msg):
         """Process audio data from microphone and send to VR system"""
         # Convert ROS message to VR-compatible format
-        # This would be implemented based on the specific VR system
-        pass
+        # Store the audio volume (assuming first element is volume)
+        if len(msg.data) > 0:
+            # Calculate volume as RMS or use the first value as volume indicator
+            volume = int(abs(sum(msg.data) / len(msg.data)) * 100)  # Scale to 0-100 range
+            self.latest_audio_volume = min(max(volume, 0), 100)  # Clamp to 0-100
     
     def human_position_callback(self, msg):
         """Process human position data and send to VR system"""
@@ -273,16 +330,145 @@ class VRInterfaceNode(Node):
         """Process human skeleton joint poses data"""
         self.human_skeleton_poses = msg
         
+        # Store the latest skeleton data
+        self.latest_skeleton_data = msg
+        
         # Log at debug level to reduce verbosity
         self.get_logger().debug(f'VR: Human skeleton poses received with {len(msg.poses)} joints')
-        
-        # This would be implemented based on the specific VR system
     
     def vr_command_callback(self, vr_data):
         """Process commands from VR system and publish to ROS topics"""
         # This method is now replaced by the UDP-based process_vr_data method
         # Keeping for backwards compatibility but VR commands now come via UDP
         pass
+    
+    def send_data_to_vr(self):
+        """Send robot pose, audio, and skeleton data to VR system via UDP"""
+        if not self.udp_socket:
+            return
+            
+        try:
+            # Create the data packet
+            data_packet = self.create_vr_data_packet()
+            
+            if data_packet:
+                # Send the packet to the configured VR address/port
+                send_address = (self.udp_send_address, self.udp_send_port)
+                self.udp_socket.sendto(data_packet, send_address)
+                self.get_logger().debug(f'Sent {len(data_packet)} bytes to VR client at {send_address}')
+                
+        except Exception as e:
+            self.get_logger().error(f'Failed to send data to VR system: {str(e)}')
+    
+    def create_vr_data_packet(self):
+        """Create a binary data packet containing robot pose and audio data (no skeleton)"""
+        try:
+            # Increment message order counter with overflow handling
+            self.outgoing_message_order = (self.outgoing_message_order + 1) % (2**31)
+            
+            # Initialize data arrays
+            data_ints = []
+            data_floats = []
+            
+            # 1. Message order (1 int) - FIRST in the packet
+            data_ints.append(self.outgoing_message_order)
+            
+            # 2. Robot pose (4 floats: x, y, z, w)
+            if self.latest_robot_pose:
+                pos = self.latest_robot_pose.pose.pose.position
+                ori = self.latest_robot_pose.pose.pose.orientation
+                data_floats.extend([pos.x, pos.y, ori.z, ori.w])
+            else:
+                # Default values if no pose available
+                data_floats.extend([0.0, 0.0, 0.0, 1.0])
+            
+            # 3. Audio volume (1 int)
+            data_ints.append(self.latest_audio_volume)
+            
+            # Create binary packet
+            # Format: 2 ints (message_order + audio) + 4 floats (pose)
+            packet_format = f'{len(data_ints)}i{len(data_floats)}f'
+            packet_data = data_ints + data_floats
+            
+            # Pack the data
+            data_packet = struct.pack(packet_format, *packet_data)
+            
+            self.get_logger().debug(f'Created VR packet: order={self.outgoing_message_order}, '
+                                  f'{len(data_ints)} ints, {len(data_floats)} floats, '
+                                  f'total {len(data_packet)} bytes')
+            
+            return data_packet
+            
+        except Exception as e:
+            self.get_logger().error(f'Failed to create VR data packet: {str(e)}')
+            return None
+    
+    def send_skeleton_to_vr(self):
+        """Send skeleton data to VR system via UDP on separate port"""
+        if not self.udp_socket:
+            return
+            
+        try:
+            # Create the skeleton data packet
+            skeleton_packet = self.create_skeleton_data_packet()
+            
+            if skeleton_packet:
+                # Send the packet to the configured skeleton address/port
+                skeleton_address = (self.udp_skeleton_address, self.udp_skeleton_port)
+                self.udp_socket.sendto(skeleton_packet, skeleton_address)
+                self.get_logger().debug(f'Sent {len(skeleton_packet)} bytes to skeleton port at {skeleton_address}')
+                
+        except Exception as e:
+            self.get_logger().error(f'Failed to send skeleton data to VR system: {str(e)}')
+    
+    def create_skeleton_data_packet(self):
+        """Create a binary data packet containing only skeleton data"""
+        try:
+            # Increment skeleton message order counter with overflow handling
+            self.skeleton_message_order = (self.skeleton_message_order + 1) % (2**31)
+            
+            # Initialize data arrays
+            data_ints = []
+            data_floats = []
+            
+            # 1. Message order (1 int) - FIRST in the packet
+            data_ints.append(self.skeleton_message_order)
+            
+            # 2. Skeleton data (variable number of floats, 3 per joint: x, y, z)
+            skeleton_floats = []
+            if self.latest_skeleton_data and len(self.latest_skeleton_data.poses) > 0:
+                for pose in self.latest_skeleton_data.poses:
+                    skeleton_floats.extend([
+                        pose.position.x,
+                        pose.position.y, 
+                        pose.position.z
+                    ])
+            else:
+                # If no skeleton data, send zeros for a standard number of joints (e.g., 17 joints)
+                # This represents the common human pose estimation joint count
+                for _ in range(17):  # 17 joints * 3 coordinates = 51 floats
+                    skeleton_floats.extend([0.0, 0.0, 0.0])
+            
+            # Add skeleton data to main data array
+            data_floats.extend(skeleton_floats)
+            
+            # Create binary packet
+            # Format: 1 int (message_order) + N*3 floats (skeleton)
+            packet_format = f'{len(data_ints)}i{len(data_floats)}f'
+            packet_data = data_ints + data_floats
+            
+            # Pack the data
+            data_packet = struct.pack(packet_format, *packet_data)
+            
+            self.get_logger().debug(f'Created skeleton packet: order={self.skeleton_message_order}, '
+                                  f'{len(data_ints)} ints, {len(data_floats)} floats, '
+                                  f'total {len(data_packet)} bytes')
+            
+            return data_packet
+            
+        except Exception as e:
+            self.get_logger().error(f'Failed to create skeleton data packet: {str(e)}')
+            return None
 
 
 def main(args=None):

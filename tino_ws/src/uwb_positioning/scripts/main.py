@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # """
 # ===================================================================
 # |                                                                 |
@@ -19,7 +20,6 @@
 # ===================================================================
 # """
 
-#!/usr/bin/env python3
 import serial
 import time
 from dwm1001_systemDefinitions import SYS_DEFS

@@ -35,6 +35,7 @@ The legacy system provides real-time control via gamepad and includes video stre
 - **Jetson Orin Nano** - central controller running ROS2 Humble
 - **Motors and servos** - actuators for movement
 - **Luxonis Oak-D Pro Camera** - for visual SLAM with RTABMAP and pose detection
+- **DWM1001 UWB Module** - for precise indoor positioning and sensor fusion
 - **Microphone and speaker** - for audio communication
 - **Gamepad** - user input device (Logitech Cordless RumblePad 2)
 
@@ -44,6 +45,7 @@ The legacy system provides real-time control via gamepad and includes video stre
 - **ROS2 Humble nodes** - distributed system for control, perception, and communication
 - **RTABMAP** - for Simultaneous Localization and Mapping (SLAM)
 - **DepthAI** - for Oak-D Pro camera integration
+- **UWB Positioning** - DWM1001-based ultra-wideband indoor positioning system
 
 ### Legacy Hardware Components
 
@@ -73,22 +75,24 @@ legacy_tino/               # Legacy Arduino and Raspberry Pi code
 
 tino_ws/                   # Modern ROS2-based implementation
   └── src/
-      └── tino_ros/        # ROS2 package for Tino robot
-          ├── launch/      # Launch files for different system configurations
-          ├── resource/    # Resource files (models, etc.)
-          └── tino_ros/    # Python implementation of ROS2 nodes
+      ├── tino_ros/        # ROS2 package for Tino robot
+      │   ├── launch/      # Launch files for different system configurations
+      │   ├── resource/    # Resource files (models, etc.)
+      │   └── tino_ros/    # Python implementation of ROS2 nodes
+      └── uwb_positioning/ # UWB positioning package for indoor localization
 ```
 
 ## ROS2 Node Architecture
 
 The Tino ROS2 system consists of several interconnected nodes:
 
-- **robot_controller_node**: Central controller that coordinates all components
+- **robot_controller_node**: Central controller that coordinates all components and performs sensor fusion
 - **hardware_interface_node**: Communicates with Arduino boards via serial
 - **gamepad_node**: Processes gamepad inputs for robot control
 - **pose_detection_node**: Human detection and skeleton tracking
 - **audio_node**: Handles audio input/output
 - **vr_interface_node**: Interface for potential VR integration
+- **uwb_positioning_node**: DWM1001 UWB positioning system for precise indoor localization
 
 ### Key Topics and Messages
 
@@ -97,7 +101,17 @@ The Tino ROS2 system consists of several interconnected nodes:
 - **/human_position** (PoseStamped): Detected human position
 - **/human_skeleton** (MarkerArray): Visualization of detected human skeleton
 - **/localization_pose** (PoseWithCovarianceStamped): Robot's position from SLAM
+- **/UWB/Pos** (Pose): UWB positioning data for sensor fusion
+- **/UWB/Ranges** (Range): UWB range measurements from anchor nodes
+- **/vr_in/robot_pose** (PoseWithCovarianceStamped): Fused robot pose (RTAB orientation + UWB position)
 - **/audio/mic_input** and **/audio/vr_output** (Int16MultiArray): Audio data streams
+
+### Sensor Fusion Architecture
+
+The robot implements advanced sensor fusion combining:
+- **RTAB-Map**: Provides reliable orientation and visual odometry
+- **UWB Positioning**: Provides accurate absolute position in indoor environments
+- **Final Output**: Robot pose with UWB position and RTAB-Map orientation for optimal localization
 
 ## Modern Setup Instructions
 
@@ -111,9 +125,34 @@ The Tino ROS2 system consists of several interconnected nodes:
 
 2. Connect each Arduino to the Jetson Orin Nano via USB
 
-3. Connect the Oak-D Pro camera to the Jetson Orin Nano
+3. Connect the DWM1001 UWB module to the Jetson Orin Nano via USB
 
-4. Connect microphone and speaker to the Jetson Orin Nano
+4. Connect the Oak-D Pro camera to the Jetson Orin Nano
+
+5. Connect microphone and speaker to the Jetson Orin Nano
+
+6. Set up persistent device names for reliable connections:
+   ```bash
+   # Run the setup script for each device (one at a time)
+   ./setup_arduino_symlinks.sh
+   ```
+   
+   This will create persistent device links:
+   - Base Arduino: `/dev/ttyBASE`
+   - Leg Arduino: `/dev/ttyLEG`
+   - Head Arduino: `/dev/ttyHEAD`
+   - UWB Receiver: `/dev/ttyUWB`
+
+7. Upload Arduino firmware:
+   ```bash
+   # Upload to individual Arduinos
+   ./upload_new_base.sh    # Upload base Arduino firmware
+   ./upload_head.sh        # Upload head Arduino firmware  
+   ./upload_leg.sh         # Upload leg Arduino firmware
+   
+   # For debugging/fast mapping (higher speed base control)
+   ./upload_debug_base_wasd.sh  # Upload debug base firmware with WASD controls
+   ```
 
 ### Software Setup
 
@@ -129,18 +168,24 @@ The Tino ROS2 system consists of several interconnected nodes:
    sudo apt install ros-humble-rtabmap-ros ros-humble-depthai-ros
    ```
 
-3. Create a symlink for the tino_ros package:
+3. Build the workspace:
 
    ```bash
-   cd ~/tino_ws
-   colcon build --symlink-install
-   source install/setup.bash
+   ./build_workspace.sh
    ```
 
 4. Install Python dependencies:
    ```bash
-   pip install pyaudio numpy ultralytics evdev
+   pip install pyaudio numpy ultralytics evdev pyserial
    ```
+
+5. Set up audio system (runs automatically at startup, but can be run manually):
+   ```bash
+   # Configure audio devices and PulseAudio settings
+   ./setup_audio.sh
+   ```
+   
+   Note: This script is automatically executed when the robot controller starts, but you can run it manually if audio issues occur.
 
 ### Modern Usage Instructions
 
@@ -148,24 +193,42 @@ The Tino ROS2 system consists of several interconnected nodes:
 
    - Battery for wheels and leg
    - Battery for head
-   - Jetson Orin Nano power supply
+   - Battery for the Jetson Orin Nano
 
-2. Launch the ROS2 system:
+2. Launch the ROS2 system using tmux scripts:
 
    ```bash
-   # Full system with SLAM and pose detection
-   ros2 launch tino_ros tino_robot.launch.py
+   # Full system with SLAM, pose detection, and gamepad control
+   ./start_tino_with_rtab.sh
+   
+   # Full system without gamepad (for VR or remote control)
+   ./start_tino_with_rtab_no_gamepad.sh
+   ```
+   
+   These scripts create a tmux session with split windows:
+   - Left side: RTAB-Map SLAM system
+   - Right side: Robot control system
 
-   # For SLAM mapping mode
-   ros2 launch tino_ros rtab_mapping.launch.py
+3. Turn on the gamepad by pressing the central button (if using gamepad version)
 
-   # For SLAM localization mode
-   ros2 launch tino_ros rtab_localization.launch.py
+4. **Detaching from tmux session**: Press `Ctrl+B` then `D` to detach without stopping the robot
+   
+5. **Re-attaching to session**:
+   ```bash
+   # For gamepad version
+   tmux attach-session -t tino
+   
+   # For no-gamepad version  
+   tmux attach-session -t tino_basic
    ```
 
-3. Turn on the gamepad by pressing the central button
+6. **Stopping the system**:
+   ```bash
+   # Kill the entire tmux session and all robot processes
+   ./kill_tino_tmux.sh
+   ```
 
-4. Control the robot using the gamepad:
+7. Control the robot using the gamepad:
 
    **Base Movement:**
    - Bumper buttons (L1/R1): Atomic rotation movements with automatic case 3 execution
@@ -189,6 +252,88 @@ The Tino ROS2 system consists of several interconnected nodes:
    - Pulse system: each button press sends a 3-cycle command pulse
 
 5. To stop the system, press Ctrl+C in the terminal
+
+### Alternative Launch Methods
+
+If you prefer to run components individually without tmux, you can use these manual launch commands:
+
+```bash
+# Full system with SLAM and pose detection
+ros2 launch tino_ros tino_robot.launch.py
+
+# Gamepad version with SLAM
+ros2 launch tino_ros tino_robot_gamepad.launch.py
+
+# For SLAM mapping mode only
+ros2 launch tino_ros rtab_mapping.launch.py
+
+# For SLAM localization mode only
+ros2 launch tino_ros rtab_localization.launch.py
+```
+
+## Debug Mode for Fast Mapping
+
+For faster robot movement during mapping or debugging, use the debug base firmware:
+
+1. Upload debug firmware:
+   ```bash
+   ./upload_debug_base_wasd.sh
+   ```
+
+2. This enables:
+   - Higher speed base movement
+   - WASD-style directional controls
+   - Optimized for quick environment mapping
+   - Faster response times for debugging
+
+3. **Important**: Switch back to normal firmware for regular operation:
+   ```bash
+   ./upload_new_base.sh
+   ```
+
+## UWB Positioning System
+
+### Overview
+
+The Tino robot integrates a DWM1001 Ultra-Wideband (UWB) positioning system for precise indoor localization. This system provides centimeter-level accuracy and is used in combination with RTAB-Map for optimal sensor fusion.
+
+### UWB Topics and Data
+
+The UWB positioning node publishes two main topics:
+
+**`/UWB/Pos` (geometry_msgs/Pose)**
+- 3D position coordinates (X, Y, Z) from the UWB positioning system
+- Orientation set to identity quaternion (position-only data)
+- Used for sensor fusion with RTAB-Map orientation
+
+**`/UWB/Ranges` (sensor_msgs/Range)**
+- Distance measurements from UWB anchor nodes
+- Range: 0.1m to 50.0m
+- Frame ID: 'dwm1001'
+- Raw ranging data for debugging and analysis
+
+### Sensor Fusion Process
+
+1. **RTAB-Map**: Provides reliable orientation and visual odometry
+2. **UWB System**: Provides accurate absolute position coordinates
+3. **Robot Controller**: Fuses both sources:
+   - **Position**: Uses UWB coordinates for precise localization
+   - **Orientation**: Uses RTAB-Map quaternion for reliable heading
+   - **Output**: Combined pose published to `/vr_in/robot_pose`
+
+### UWB Configuration
+
+The UWB module connects via USB and uses the following default parameters:
+- **Serial Port**: `/dev/ttyUWB` (persistent device name)
+- **Baud Rate**: 115200
+- **Device**: DWM1001 development board
+
+### Troubleshooting UWB
+
+- **Check device connection**: `ls -la /dev/ttyUWB`
+- **Monitor UWB topics**: `ros2 topic echo /UWB/Pos`
+- **View UWB ranges**: `ros2 topic echo /UWB/Ranges`
+- **Check fusion status**: Look for "Sensor Fusion" messages in robot controller logs
 
 ## Legacy Setup Instructions
 
@@ -550,39 +695,79 @@ Several utility scripts are provided to help manage the robot's operation:
   ./build_workspace.sh
   ```
 
+- **setup_arduino_symlinks.sh** - Sets up persistent device names for all connected devices
+  ```bash
+  ./setup_arduino_symlinks.sh
+  ```
+
+- **setup_audio.sh** - Configures audio settings and PulseAudio for the robot
+  ```bash
+  ./setup_audio.sh
+  ```
+
+### Arduino Firmware Upload
+
+- **upload_new_base.sh** - Uploads standard firmware to the base Arduino
+  ```bash
+  ./upload_new_base.sh
+  ```
+
+- **upload_head.sh** - Uploads firmware to the head Arduino
+  ```bash
+  ./upload_head.sh
+  ```
+
+- **upload_leg.sh** - Uploads firmware to the leg Arduino
+  ```bash
+  ./upload_leg.sh
+  ```
+
+- **upload_legacy_leg.sh** - Uploads legacy firmware to the leg Arduino
+  ```bash
+  ./upload_legacy_leg.sh
+  ```
+
+- **upload_debug_base_wasd.sh** - Uploads debug firmware with enhanced speed and WASD controls
+  ```bash
+  ./upload_debug_base_wasd.sh
+  ```
+  Use this for faster movement during mapping or debugging sessions.
+
 ### Running the Robot
 
-- **start_tino_with_rtab.sh** - Launches the Tino robot with RTAB-Map localization and gamepad control in a tmux session
+- **start_tino_with_rtab.sh** - Launches the complete Tino robot system with RTAB-Map localization and gamepad control in a tmux session
   ```bash
   ./start_tino_with_rtab.sh
   ```
-  This script creates a horizontally split tmux session with RTAB-Map on the left side and gamepad control on the right.
+  Creates a horizontally split tmux session with RTAB-Map on the left and gamepad control on the right.
 
 - **start_tino_with_rtab_no_gamepad.sh** - Launches the Tino robot with RTAB-Map localization and basic robot control (without gamepad) in a tmux session
   ```bash
   ./start_tino_with_rtab_no_gamepad.sh
   ```
-  This script creates a horizontally split tmux session with RTAB-Map on the left side and basic robot control on the right.
+  Creates a horizontally split tmux session with RTAB-Map on the left and robot control on the right.
 
 ### Stopping the Robot
 
-- **kill_tino_tmux.sh** - Kills the Tino robot tmux session
+- **kill_tino_tmux.sh** - Safely terminates all Tino robot tmux sessions and processes
   ```bash
   ./kill_tino_tmux.sh
   ```
-  This script safely terminates any running tmux sessions for the robot.
+  This script ensures all robot processes are properly stopped.
 
 ### Other Utility Scripts
 
 - **run_rtabmap.sh** - A wrapper script to run rtabmap with proper environment configuration
-- **setup_arduino_symlinks.sh** - Sets up symbolic links for Arduino communication
-- **setup_audio.sh** - Configures audio settings for the robot
-- **upload_head.sh** - Uploads firmware to the head Arduino
-- **upload_new_base.sh** - Uploads firmware to the base Arduino
+- **depth_calibration_helper.py** - Assists with camera depth calibration
+- **test_skeleton_generator.py** - Tests the human skeleton detection system
+- **test_skeleton_udp_receiver.py** - Tests UDP skeleton data reception
+- **test_vr_udp_client.py** - Tests VR interface UDP communication
 
 ### TMux Session Management
 
-To detach from a tmux session without stopping it, press `Ctrl+B` then `D`.
-To re-attach to a running session later:
-- For the standard configuration: `tmux attach-session -t tino`
-- For the no-gamepad configuration: `tmux attach-session -t tino_basic`
+- **Detach from session**: Press `Ctrl+B` then `D` to detach without stopping the robot
+- **Re-attach to running session**:
+  - Standard configuration: `tmux attach-session -t tino`
+  - No-gamepad configuration: `tmux attach-session -t tino_basic`
+- **List active sessions**: `tmux list-sessions`
+- **Kill specific session**: `tmux kill-session -t tino` (or use the kill script above)

@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String, Int16MultiArray, Float32MultiArray
-from geometry_msgs.msg import Twist, PoseWithCovarianceStamped, PoseStamped, PoseArray
+from geometry_msgs.msg import Twist, PoseWithCovarianceStamped, PoseStamped, PoseArray, Pose
 from visualization_msgs.msg import MarkerArray
 import numpy as np
 import subprocess  # Add this import for audio setup
@@ -40,6 +40,13 @@ class RobotControllerNode(Node):
             PoseWithCovarianceStamped,
             '/localization_pose',   
             self.pose_callback,
+            10)
+        
+        # Subscribe to UWB position data
+        self.uwb_position_sub = self.create_subscription(
+            Pose,
+            '/UWB/Pos',
+            self.uwb_position_callback,
             10)
         
         # Subscribe to human position from pose detection
@@ -85,6 +92,14 @@ class RobotControllerNode(Node):
         self.current_pose = None
         self.pose_received = False
         
+        # Store UWB position information
+        self.current_uwb_position = None
+        self.uwb_position_received = False
+        
+        # Store RTAB-Map orientation information
+        self.current_rtab_orientation = None
+        self.rtab_orientation_received = False
+        
         # Store last 5 positions for tracking validation
         self.position_history = []
         self.max_history_size = 5
@@ -110,7 +125,7 @@ class RobotControllerNode(Node):
         self.skeleton_publish_rate = 1.0 / rate_hz
         self.skeleton_timer = self.create_timer(self.skeleton_publish_rate, self.publish_skeleton_data)
         
-        self.get_logger().info(f'Robot controller node initialized with localization, audio, and human skeleton tracking (skeleton publish rate: {1.0/self.skeleton_publish_rate:.1f}Hz)')
+        self.get_logger().info(f'Robot controller node initialized with localization, UWB positioning, audio, and human skeleton tracking (skeleton publish rate: {1.0/self.skeleton_publish_rate:.1f}Hz)')
         
     def pose_callback(self, msg):
         """Process incoming localization pose data"""
@@ -136,33 +151,102 @@ class RobotControllerNode(Node):
         # Store position in history (before rotation)
         self._update_position_history(position)
         
+        # Store RTAB-Map orientation for sensor fusion
+        self.current_rtab_orientation = orientation
+        self.rtab_orientation_received = True
+        
         # Apply 60-degree rotation to align with map orientation
         rotated_msg = self._apply_rotation_to_pose(msg, 11.5)
         
-        self.current_pose = rotated_msg
+        # Create fused pose using UWB position if available
+        fused_msg = self._create_fused_pose(rotated_msg)
+        
+        self.current_pose = fused_msg
         self.pose_received = True
 
         # Log first pose received and then periodically
         if not hasattr(self, 'pose_count'):
             self.pose_count = 0
-            self.get_logger().info('First localization pose received (with 20° rotation applied)')
+            self.get_logger().info('First localization pose received (with 20° rotation applied and UWB fusion)')
             ## Log the initial pose
-            pos = rotated_msg.pose.pose.position
-            ori = rotated_msg.pose.pose.orientation
+            pos = fused_msg.pose.pose.position
+            ori = fused_msg.pose.pose.orientation
             self.get_logger().info(
-                f'Initial Rotated Pose: Position ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f}), '
+                f'Initial Fused Pose: Position ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f}), '
                 f'Orientation ({ori.x:.2f}, {ori.y:.2f}, {ori.z:.2f}, {ori.w:.2f})'
             )
         
         self.pose_count += 1
-        pos = rotated_msg.pose.pose.position
-        ori = rotated_msg.pose.pose.orientation
+        pos = fused_msg.pose.pose.position
+        ori = fused_msg.pose.pose.orientation
         # self.get_logger().info(
-        #     f'Pose update: Position ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f}), '
+        #     f'Fused Pose update: Position ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f}), '
         #     f'Orientation ({ori.x:.2f}, {ori.y:.2f}, {ori.z:.2f}, {ori.w:.2f})'
         # )
 
-        self.pose_pub.publish(rotated_msg)
+        self.pose_pub.publish(fused_msg)
+    
+    def uwb_position_callback(self, msg):
+        """Process incoming UWB position data"""
+        self.current_uwb_position = msg.position
+        self.uwb_position_received = True
+        
+        # Log UWB position information
+        pos = msg.position
+        self.get_logger().debug(
+            f'UWB Position: ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f})'
+        )
+    
+    def _create_fused_pose(self, rtab_pose_msg):
+        """
+        Create a fused pose using UWB position and RTAB-Map orientation
+        
+        Args:
+            rtab_pose_msg: PoseWithCovarianceStamped from RTAB-Map (already rotated)
+            
+        Returns:
+            PoseWithCovarianceStamped: Fused pose message
+        """
+        # Create a copy of the RTAB-Map message
+        fused_msg = PoseWithCovarianceStamped()
+        fused_msg.header = rtab_pose_msg.header
+        fused_msg.pose.covariance = rtab_pose_msg.pose.covariance
+        
+        # Use RTAB-Map orientation (already rotated)
+        fused_msg.pose.pose.orientation = rtab_pose_msg.pose.pose.orientation
+        
+        # Use UWB position if available, otherwise fall back to RTAB-Map position
+        if self.uwb_position_received and self.current_uwb_position is not None:
+            # Use UWB position
+            fused_msg.pose.pose.position.x = self.current_uwb_position.x
+            fused_msg.pose.pose.position.y = self.current_uwb_position.y
+            fused_msg.pose.pose.position.z = self.current_uwb_position.z
+            
+            # Log fusion info (only occasionally to avoid spam)
+            if hasattr(self, 'fusion_log_counter'):
+                self.fusion_log_counter += 1
+            else:
+                self.fusion_log_counter = 0
+                
+            if self.fusion_log_counter % 50 == 0:  # Log every 50th message (every 5 seconds at 10Hz)
+                self.get_logger().info(
+                    f'Sensor Fusion: Using UWB position ({self.current_uwb_position.x:.2f}, '
+                    f'{self.current_uwb_position.y:.2f}, {self.current_uwb_position.z:.2f}) '
+                    f'with RTAB-Map orientation'
+                )
+        else:
+            # Fall back to RTAB-Map position
+            fused_msg.pose.pose.position = rtab_pose_msg.pose.pose.position
+            
+            if hasattr(self, 'fallback_log_counter'):
+                self.fallback_log_counter += 1
+            else:
+                self.fallback_log_counter = 0
+                
+            if self.fallback_log_counter % 50 == 0:  # Log every 50th message
+                self.get_logger().warn('Sensor Fusion: UWB position not available, using RTAB-Map position')
+        
+        return fused_msg
     
     def _apply_rotation_to_pose(self, pose_msg, rotation_degrees):
         """

@@ -48,6 +48,18 @@ def generate_launch_description():
             output='screen'
         ),
         
+        # Start UWB Positioning Node
+        Node(
+            package='uwb_positioning',
+            executable='main.py',
+            name='uwb_positioning',
+            parameters=[{
+                'serial_port_name': '/dev/ttyUWB',
+                'serial_baud_rate': 115200
+            }],
+            output='screen'
+        ),
+        
         # # Start the gamepad node
         # Node(
         #     package='tino_ros',

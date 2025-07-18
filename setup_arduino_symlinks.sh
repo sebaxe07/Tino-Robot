@@ -1,15 +1,15 @@
 #!/bin/bash
-# Script to configure persistent Arduino symlinks for Tino Robot
-# Run this once for each Arduino to identify and set up symlinks
+# Script to configure persistent device symlinks for Tino Robot
+# Run this once for each device (Arduino/UWB) to identify and set up symlinks
 
-echo "Arduino Persistent Device Name Setup for Tino Robot"
-echo "=================================================="
+echo "Tino Robot Persistent Device Name Setup"
+echo "======================================="
 echo ""
-echo "This script will help you set up persistent device names for your Arduino boards."
-echo "Please connect only ONE Arduino at a time and follow the instructions."
+echo "This script will help you set up persistent device names for your devices."
+echo "Please connect only ONE device at a time and follow the instructions."
 echo ""
 
-# Function to get Arduino serial number
+# Function to get device serial number
 get_serial_number() {
     local dev_path=$1
     if [ -e "$dev_path" ]; then
@@ -18,14 +18,14 @@ get_serial_number() {
         product=$(udevadm info -a -n "$dev_path" | grep -m 1 '{idProduct}' | cut -d '"' -f 2)
         
         if [ -n "$serial" ]; then
-            echo "Found Arduino with:"
+            echo "Found device with:"
             echo "  Serial: $serial"
             echo "  Vendor ID: $vendor"
             echo "  Product ID: $product"
             return 0
         fi
     fi
-    echo "No Arduino device found at $dev_path."
+    echo "No device found at $dev_path."
     return 1
 }
 
@@ -52,18 +52,18 @@ add_udev_rule() {
 }
 
 # Main script
-echo "Checking if Arduino device is connected..."
+echo "Checking if device is connected..."
 
 if [ -e "/dev/ttyACM0" ]; then
     dev_path="/dev/ttyACM0"
 elif [ -e "/dev/ttyUSB0" ]; then
     dev_path="/dev/ttyUSB0"
 else
-    echo "No Arduino device found. Please connect an Arduino and try again."
+    echo "No device found. Please connect a device and try again."
     exit 1
 fi
 
-echo "Arduino found at $dev_path"
+echo "Device found at $dev_path"
 echo ""
 
 # Get serial number
@@ -74,11 +74,12 @@ if [ $? -ne 0 ]; then
 fi
 
 echo ""
-echo "Which Arduino is this?"
+echo "Which device is this?"
 echo "1) Base Arduino (ttyBASE)"
 echo "2) Leg Arduino (ttyLEG)"
 echo "3) Head Arduino (ttyHEAD)"
-read -p "Select [1-3]: " choice
+echo "4) UWB Receiver (ttyUWB)"
+read -p "Select [1-4]: " choice
 
 case $choice in
     1)
@@ -89,6 +90,9 @@ case $choice in
         ;;
     3)
         add_udev_rule "$serial" "$vendor" "$product" "Head" "ttyHEAD"
+        ;;
+    4)
+        add_udev_rule "$serial" "$vendor" "$product" "UWB" "ttyUWB"
         ;;
     *)
         echo "Invalid selection."
@@ -103,10 +107,11 @@ sudo udevadm trigger
 
 echo ""
 echo "Setup complete!"
-echo "After connecting all Arduinos, you should have the following device links:"
+echo "After connecting all devices, you should have the following device links:"
 echo "- Base Arduino: /dev/ttyBASE"
 echo "- Leg Arduino:  /dev/ttyLEG"
 echo "- Head Arduino: /dev/ttyHEAD"
+echo "- UWB Receiver: /dev/ttyUWB"
 echo ""
 echo "These device names will persist across reboots."
 echo ""

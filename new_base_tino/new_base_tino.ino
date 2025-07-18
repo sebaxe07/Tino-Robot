@@ -9,7 +9,7 @@ void process_special_command(char* buffer);
 void send_status_update();
 
 // Debug flag - set to true to enable debug prints, false to disable
-#define DEBUG_MODE true
+#define DEBUG_MODE false
 
 // Debug print helper functions
 void debug_print(const char* message) {

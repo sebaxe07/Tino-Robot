@@ -137,7 +137,7 @@ class RobotControllerNode(Node):
         self._update_position_history(position)
         
         # Apply 60-degree rotation to align with map orientation
-        rotated_msg = self._apply_rotation_to_pose(msg, 21.0)
+        rotated_msg = self._apply_rotation_to_pose(msg, 11.5)
         
         self.current_pose = rotated_msg
         self.pose_received = True
@@ -402,7 +402,7 @@ class RobotControllerNode(Node):
     def _is_position_reasonable(self, position):
         """
         Check if the given position is reasonable compared to recent history
-        
+
         Args:
             position: geometry_msgs.msg.Point - The position to validate
             

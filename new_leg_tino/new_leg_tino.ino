@@ -87,9 +87,9 @@ bool isCase3Extending = false;     // Tracks if case 3 is in extension phase (10
 unsigned long case3ReturnStartTime = 0;  // Track when case 3 extension/return started
 float case3ReturnDuration = 2.0;  // Maximum time for return movement (2 seconds)
 //_______________
-bool previousSteadyState = 0;
-bool unpressedState = 1;  // HIGH
-bool pressedState = 0;    // LOW
+bool previousSteadyState = 1;
+bool unpressedState = 0;  // LOW
+bool pressedState = 1;    // HIGH
 bool isPressed = false;
 
 //_______________
@@ -174,7 +174,7 @@ float positionPID(int targetPos, int currentPos) {
   return u;
 }
 
-// state == HIGH --> UNTOUCHED == 1 || state == LOW --> TOUCHED == 0
+// state == HIGH --> PRESSED == 1 || state == LOW --> UNTOUCHED == 0
 bool ButtonisPressed() {
   if (previousSteadyState == unpressedState && state == pressedState) {
     previousSteadyState = state;
@@ -390,20 +390,18 @@ void moveLeg(float linearX, float angular) {
     } else if (isReturningFromCase2) {
       // Return phase: 160 to neutral (button press)
       unsigned long currentTime = millis();
-      float elapsedReturnTime = (currentTime - case3ReturnStartTime) / 1000.0;
-      
-      // Only print occasionally during return movement
-      static unsigned long lastCase3Print = 0;
-      if (DEBUG_ENABLED && currentTime - lastCase3Print > 3000) {  // Print every 3 seconds instead of 1 second
-        DEBUG_PRINT("C3 ret: "); DEBUG_PRINT(elapsedReturnTime); 
-        DEBUG_PRINT("s, Btn: "); DEBUG_PRINTLN(state == LOW ? "Y" : "N");
-        lastCase3Print = currentTime;
-      }
+      float elapsedReturnTime = (currentTime - case3ReturnStartTime) / 1000.0;        // Only print occasionally during return movement
+        static unsigned long lastCase3Print = 0;
+        if (DEBUG_ENABLED && currentTime - lastCase3Print > 3000) {  // Print every 3 seconds instead of 1 second
+          DEBUG_PRINT("C3 ret: "); DEBUG_PRINT(elapsedReturnTime); 
+          DEBUG_PRINT("s, Btn: "); DEBUG_PRINTLN(state == HIGH ? "Y" : "N");
+          lastCase3Print = currentTime;
+        }
       
       vt = 90;  // Continue returning to neutral
       
       // Check completion criteria: Only button press (most reliable indicator)
-      bool buttonPressed = (state == LOW);  // Button pressed means home position reached
+      bool buttonPressed = (state == HIGH);  // Button pressed means home position reached
       
       if (buttonPressed) {
         DEBUG_PRINT("Case 3 return complete - Button pressed, time: "); 
@@ -492,7 +490,7 @@ void moveLeg(float linearX, float angular) {
       littlePushCompleted = false;  // Reset completion flag for future pushes
 
       // AUTO BUTTON SYSTEM - ONLY ACTIVE IN IDLE MODE
-      if (state == HIGH) {
+      if (state == LOW) {
         // Button not pressed - move towards start position intelligently
         // Use absolute encoder position to determine which direction to move
         // Assuming neutral/start position is 0 ticks (where button is pressed)
@@ -534,7 +532,7 @@ void moveLeg(float linearX, float angular) {
           // No need to constrain since we're using specific values
           // vt = constrain(vt, 60, 120);  // Removed - let negative values through
         }
-      } else if (state == LOW) {
+      } else if (state == HIGH) {
         vt = 0;   // Stop at limit switch
         // Reset absolute position when button is pressed AND leg is actually stopped
         // Only reset if we're not currently in the middle of a movement
@@ -773,7 +771,7 @@ void computeOutput() {
     // Serial.print(", Sinusoidal: ");
     // Serial.print(isSinusoidalActive ? "ON" : "OFF");
     // Serial.print(", Button: ");
-    // Serial.println(state == HIGH ? "HIGH" : "LOW");
+    // Serial.println(state == HIGH ? "PRESSED" : "UNPRESSED");
     
     // Update last printed values
     lastPrintedVt = vt;
@@ -832,9 +830,9 @@ void setup() {
   // Initial position check
   button.loop();
   state = button.getState();
-  if (state == HIGH) {
+  if (state == LOW) {
     vt = 120;  // Move towards initial position
-    while (state == HIGH) {
+    while (state == LOW) {
       computeOutput();
       button.loop();
       state = button.getState();
@@ -857,9 +855,7 @@ void setup() {
 
 void loop() {
   button.loop();
-  state = button.getState();  // state == HIGH --> UNTOUCHED == 1 || state == LOW --> TOUCHED == 0
-                              //codice giusto
-
+  state = button.getState();  // state == HIGH --> PRESSED == 1 || state == LOW --> UNTOUCHED == 0
   isPressed = ButtonisPressed();
   serial_loop();
   computeOutput();

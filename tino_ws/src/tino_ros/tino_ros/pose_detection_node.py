@@ -42,6 +42,19 @@ class PoseDetectionNode(Node):
         self.declare_parameter('confidence_threshold', 0.5)
         self.confidence_threshold = self.get_parameter('confidence_threshold').value
         
+        # Add depth processing parameters
+        self.declare_parameter('depth_outlier_threshold', 0.3)  # 30% deviation from reference
+        self.declare_parameter('depth_smoothing_window', 3)     # Frames to smooth over
+        self.declare_parameter('depth_scale_factor', 0.575)     # Depth correction factor (based on 4.6m/8m calibration)
+        self.declare_parameter('depth_offset', 0.0)             # Depth offset in meters
+        self.declare_parameter('depth_debug_logging', False)    # Enable verbose depth logging
+        
+        self.depth_outlier_threshold = self.get_parameter('depth_outlier_threshold').value
+        self.depth_smoothing_window = self.get_parameter('depth_smoothing_window').value
+        self.depth_scale_factor = self.get_parameter('depth_scale_factor').value
+        self.depth_offset = self.get_parameter('depth_offset').value
+        self.depth_debug_logging = self.get_parameter('depth_debug_logging').value
+        
         self.declare_parameter('image_topic', '/right/image_rect')
         self.declare_parameter('depth_topic', '/stereo/depth')
         self.declare_parameter('depth_info_topic', '/stereo/camera_info')
@@ -122,6 +135,10 @@ class PoseDetectionNode(Node):
         self.position_history = []
         self.history_size = 5
         
+        # For skeleton depth smoothing
+        self.skeleton_depth_history = []
+        self.skeleton_depth_history_size = self.depth_smoothing_window
+        
         # Define skeleton connections (which keypoints are connected)
         # Based on COCO keypoint format used by YOLO
         self.skeleton_connections = [
@@ -154,6 +171,9 @@ class PoseDetectionNode(Node):
         # Keep initialization logs at INFO level
         self.get_logger().info(f'Pose detection node initialized with image topic: {self.image_topic}')
         self.get_logger().info(f'Using camera frame: {self.camera_frame}')
+        self.get_logger().info(f'Depth outlier threshold: {self.depth_outlier_threshold:.1%}')
+        self.get_logger().info(f'Depth smoothing window: {self.depth_smoothing_window} frames')
+        self.get_logger().info(f'Depth calibration - Scale: {self.depth_scale_factor}, Offset: {self.depth_offset}m')
         
     def camera_info_callback(self, msg):
         self.camera_info = msg
@@ -196,8 +216,8 @@ class PoseDetectionNode(Node):
         except Exception as e:
             self.get_logger().error(f'Error in pose detection: {e}')
     
-    def get_depth_at_point(self, x, y, window_size=5):
-        """Get the median depth value at a specific point with a small window"""
+    def get_depth_at_point(self, x, y, window_size=9):
+        """Get the median depth value at a specific point with a larger window for better stability"""
         # Ensure coordinates are within image boundaries
         h, w = self.latest_depth_image.shape
         x = max(0, min(x, w-1))
@@ -213,12 +233,30 @@ class PoseDetectionNode(Node):
         # Extract depth values in the window
         depth_window = self.latest_depth_image[y1:y2, x1:x2]
         
-        # Filter out zero or invalid depth values
+        # Filter out zero or invalid depth values and outliers
         valid_depths = depth_window[depth_window > 0]
         
         if len(valid_depths) > 0:
             # Use median to be robust against outliers
-            return np.median(valid_depths)
+            median_depth = np.median(valid_depths)
+            
+            # Log raw depth values for debugging
+            self.get_logger().debug(f"Depth at ({x},{y}): raw median={median_depth}")
+            
+            # Filter out values that are too far from median (outlier rejection)
+            if len(valid_depths) > 1:  # Only filter if we have multiple values
+                std_depth = np.std(valid_depths)
+                filtered_depths = valid_depths[np.abs(valid_depths - median_depth) < 2 * std_depth]
+                
+                if len(filtered_depths) > 0:
+                    final_depth = np.median(filtered_depths)
+                else:
+                    final_depth = median_depth
+            else:
+                final_depth = median_depth
+            
+            self.get_logger().debug(f"Final depth at ({x},{y}): {final_depth}")
+            return final_depth
         else:
             return 0  # No valid depth values found
     
@@ -247,7 +285,9 @@ class PoseDetectionNode(Node):
         
         if len(valid_depths) > 0:
             # Use median to be robust against outliers
-            return np.median(valid_depths)
+            median_depth = np.median(valid_depths)
+            self.get_logger().debug(f"Person depth in ROI ({roi_x1},{roi_y1})-({roi_x2},{roi_y2}): {median_depth}")
+            return median_depth
         else:
             return 0  # No valid depth values found
     
@@ -258,8 +298,22 @@ class PoseDetectionNode(Node):
         cx = self.camera_info.k[2]
         cy = self.camera_info.k[5]
         
+        # Log raw depth for debugging
+        self.get_logger().debug(f"Raw depth at ({x},{y}): {depth}")
+        
         # Convert from image coordinates to 3D coordinates
-        z = depth / 1000.0  # Convert to meters
+        # Check if depth is already in meters or millimeters
+        if depth > 100:  # Assume millimeters if > 100
+            z = depth / 1000.0  # Convert to meters
+        else:
+            z = depth  # Already in meters
+        
+        # Apply depth calibration correction
+        z = z * self.depth_scale_factor + self.depth_offset
+        
+        # Log corrected depth
+        self.get_logger().debug(f"Corrected depth: {z:.3f}m (scale: {self.depth_scale_factor}, offset: {self.depth_offset})")
+        
         x_3d = (x - cx) * z / fx
         y_3d = (y - cy) * z / fy
         
@@ -300,6 +354,11 @@ class PoseDetectionNode(Node):
                     if depth_value > 0:
                         # Calculate 3D position
                         x_3d, y_3d, z_3d = self.calculate_3d_position(center_x, center_y, depth_value)
+                        
+                        # # Log the actual distance calculation for debugging
+                        # if i == 0:  # Only log for the first detection to avoid spam
+                        #     self.get_logger().info(f"Person detection: center=({center_x},{center_y}), "
+                        #                          f"raw_depth={depth_value}, final_distance={z_3d:.2f}m")
                         
                         # Check if this person is closer than the previous closest
                         if z_3d < closest_person_depth:
@@ -380,7 +439,7 @@ class PoseDetectionNode(Node):
             self.publish_human_position(human_position)
     
     def process_skeleton(self, keypoints, torso_depth, human_position):
-        """Process and publish skeleton keypoints"""
+        """Process and publish skeleton keypoints with improved depth consistency"""
         try:
             # Create marker array for skeleton visualization
             skeleton_markers = MarkerArray()
@@ -394,24 +453,76 @@ class PoseDetectionNode(Node):
             if hasattr(keypoints, 'xy'):
                 kpts = keypoints.xy.cpu().numpy()[0]  # Extract keypoints for the first person
             
-                # Process each keypoint
-                joint_positions_3d = []
+                # First pass: collect all valid keypoint depths for analysis
+                valid_keypoint_depths = []
+                keypoint_data = []
+                
                 for idx, (x, y) in enumerate(kpts):
                     # Ignore invalid keypoints (marked with 0,0 or negative values)
                     if x <= 0 or y <= 0:
-                        # Add None for invalid keypoints
-                        joint_positions_3d.append(None)
+                        keypoint_data.append(None)
                         continue
                     
                     # Get depth at this keypoint
                     kpt_depth = self.get_depth_at_point(int(x), int(y))
                     
-                    # If depth is not available, use torso depth
-                    if kpt_depth == 0:
-                        kpt_depth = torso_depth
+                    if kpt_depth > 0:
+                        valid_keypoint_depths.append(kpt_depth)
+                        keypoint_data.append((x, y, kpt_depth))
+                    else:
+                        keypoint_data.append((x, y, None))
+                
+                # Calculate a more robust reference depth
+                if valid_keypoint_depths:
+                    # Use the median of all valid keypoint depths as reference
+                    current_reference_depth = np.median(valid_keypoint_depths)
+                    depth_std = np.std(valid_keypoint_depths)
+                    
+                    # Filter out depth outliers (more than 2 standard deviations from median)
+                    filtered_depths = [d for d in valid_keypoint_depths 
+                                     if abs(d - current_reference_depth) <= 2 * depth_std]
+                    
+                    if filtered_depths:
+                        current_reference_depth = np.median(filtered_depths)
+                    
+                    # Apply temporal smoothing to the reference depth
+                    self.skeleton_depth_history.append(current_reference_depth)
+                    if len(self.skeleton_depth_history) > self.skeleton_depth_history_size:
+                        self.skeleton_depth_history.pop(0)
+                    
+                    # Use smoothed reference depth
+                    reference_depth = np.median(self.skeleton_depth_history)
+                    
+                    self.get_logger().debug(f"Reference depth: {reference_depth:.1f}mm, std: {depth_std:.1f}mm")
+                else:
+                    # Fallback to torso depth
+                    reference_depth = torso_depth
+                
+                # Second pass: process keypoints with consistent depth
+                joint_positions_3d = []
+                for idx, data in enumerate(keypoint_data):
+                    if data is None:
+                        joint_positions_3d.append(None)
+                        continue
+                    
+                    x, y, kpt_depth = data
+                    
+                    # Use individual keypoint depth if valid and reasonable,
+                    # otherwise fall back to reference depth
+                    if kpt_depth is not None and kpt_depth > 0:
+                        # Check if the individual depth is reasonable compared to reference
+                        if abs(kpt_depth - reference_depth) / reference_depth < self.depth_outlier_threshold:
+                            final_depth = kpt_depth
+                        else:
+                            # Use reference depth for outlier keypoints
+                            final_depth = reference_depth
+                            self.get_logger().debug(f"Using reference depth for {self.keypoint_names[idx]}: "
+                                                  f"individual={kpt_depth:.1f}, reference={reference_depth:.1f}")
+                    else:
+                        final_depth = reference_depth
                     
                     # Calculate 3D position of this keypoint
-                    x_3d, y_3d, z_3d = self.calculate_3d_position(int(x), int(y), kpt_depth)
+                    x_3d, y_3d, z_3d = self.calculate_3d_position(int(x), int(y), final_depth)
                     joint_positions_3d.append((x_3d, y_3d, z_3d))
                     
                     # Create a sphere marker for this keypoint

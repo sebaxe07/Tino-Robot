@@ -415,3 +415,117 @@ As a cleanup task, we also removed the old left joystick analog control since ev
 
 
 Added a system to offset the map positionbyt a desired amount of degree, this becauseits difficult to control the alignment of the SLAM map when creating it and some times it can be created with a rotation, this in principle is no problem, but given that we need to map this position directly into unity is best if we have the map aligned with the cartesian plane. This value can be changed but the process needss to be trial and error until we find a desired angle, this may change from map to map
+
+After quite the amount of setup for mapping, we had to add a lot of landmarks to help the system not get lost when close to a wall, even tho the system work most of the time there are scenarios where it drifts by at maximum 1.20m
+we did some test setting 4 positions in the floor and then driving tino around those multiple times, this is the findings
+
+
+        button 
+        it1
+    position:
+      x: -9.07916381186811
+      y: -3.0198425113288256
+      z: 0.21915075182914734
+    orientation:
+      x: -0.02356615282947662
+      y: 0.03717912817458111
+      z: 0.9987406916737919
+      w: -0.024071783643750885
+      it2
+    position:
+      x: -8.186847680416442
+      y: -3.339181554181038
+      z: 0.22911125421524048
+    orientation:
+      x: -0.03578283275599135
+      y: -0.014825521998614472
+      z: 0.9886076124808023
+      w: -0.1454468531069043
+
+      i3 after spinning
+          position:
+      x: -9.132201829319898
+      y: -3.03850808312142
+      z: 0.16989609599113464
+    orientation:
+      x: -0.023309146346151374
+      y: 0.013430598998060258
+      z: 0.9970844577607847
+      w: -0.07140670417222031
+
+
+        door
+        it1
+    position:
+      x: -6.302746616280681
+      y: -2.937899155623209
+      z: 0.04246218502521515
+    orientation:
+      x: -0.041125382354844545
+      y: 0.04075343561185359
+      z: 0.9381911838945137
+      w: -0.3412406188158956
+      it2
+    position:
+      x: -7.688149884473027
+      y: -2.758148921953637
+      z: 0.26177895069122314
+    orientation:
+      x: -0.056920978093906345
+      y: 0.06027535966552371
+      z: 0.9105215513414311
+      w: -0.4050646707808027
+
+      platform
+      it1
+    position:
+      x: -5.133887212339737
+      y: -0.8823759434488573
+      z: 0.003330887295305729
+    orientation:
+      x: 0.037969363959043455
+      y: 0.042694832314988815
+      z: -0.7221974378925629
+      w: 0.6893232444590183
+    it2
+         position:
+      x: -4.155619022416493
+      y: -1.1973306038245426
+      z: 0.18429601192474365
+    orientation:
+      x: -0.0423178727432749
+      y: -0.154526999071549
+      z: 0.8307654381749795
+      w: -0.5330660364450295
+
+    middle bridge
+    it1
+    position:
+      x: -2.967067619346332
+      y: -1.0099800292205212
+      z: 0.020707421004772186
+    orientation:
+      x: -0.011650759024720693
+      y: 0.020886688418633118
+      z: 0.9882899125201247
+      w: -0.1507018578293635
+
+      it2
+          position:
+      x: -3.0019163829042084
+      y: -0.9073216003302291
+      z: 0.1694898009300232
+    orientation:
+      x: -0.0432093148775227
+      y: 0.026300433857604333
+      z: 0.9952330147461537
+      w: -0.08338188177412909
+
+
+base on all of this we found the only way to make the system "undrift" or to properly relocalize is to make tino spin, this helps rtab to get more features around and try to correct the position.
+even tho this is a solution for other scenarios, because we need to create a system that will be manage via the vr by a user with no technical expertice and also because part of the experiemt is let the user figure out stuff we cant tell the user to just "spin around" until it finds the proper relocalizatio
+also, there is no progragmatic way to find this issue of the drift in the first place, given that this position given is absolute we cant know automatically that we are drifting to try and correct
+
+At least the orientation worked really good that even if on the positionion is lost we still had good orientation so we decided the following
+we will implement a different system for localization, we will use UWB to mange the global positionion and then we will use the already in place camera and RTAB slam to get the orientation
+By doing this fusion we hope to get a stable and reliable position adn orientation

@@ -5,8 +5,8 @@
 #define DEBUG_MODE true
 
 // Motor speed settings
-#define BASE_SPEED 150      // Base PWM speed (0-255)
-#define TURN_SPEED 80       // Turning speed
+#define BASE_SPEED 255      // Base PWM speed (0-255)
+#define TURN_SPEED 150      // Turning speed
 
 // Configure the motor drivers using PWM_DIR mode
 CytronMD rightMotor(PWM_DIR, _1_1A, _1_1B);   // Right motor
@@ -87,12 +87,12 @@ void processCommand(char command) {
       
     case 'a':
     case 'A':
-      turnLeft();
+      turnRight();
       break;
       
     case 'd':
     case 'D':
-      turnRight();
+      turnLeft();
       break;
       
     case ' ':  // Space bar to stop

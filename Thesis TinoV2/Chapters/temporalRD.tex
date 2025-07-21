@@ -529,3 +529,138 @@ also, there is no progragmatic way to find this issue of the drift in the first 
 At least the orientation worked really good that even if on the positionion is lost we still had good orientation so we decided the following
 we will implement a different system for localization, we will use UWB to mange the global positionion and then we will use the already in place camera and RTAB slam to get the orientation
 By doing this fusion we hope to get a stable and reliable position adn orientation
+
+
+Now with the new UWB system implemented we have a better and precise global positioning
+We did tests on the same 4 spots 3 times each and this was the output
+
+Bridge
+it1
+  position:
+    x: 2.95
+    y: 1.28
+    z: 0.96
+  orientation:
+    x: -0.016244746081379848
+    y: 0.011590778809634706
+    z: 0.9978177685970177
+    w: -0.06294018257794398
+it2
+position:
+    x: 2.92
+    y: 1.24
+    z: 1.04
+  orientation:
+    x: 0.03365805896384339
+    y: -0.10581931225218563
+    z: 0.9615574311256412
+    w: -0.25115088467150715
+it3
+  position:
+    x: 2.96
+    y: 1.22
+    z: 0.98
+  orientation:
+    x: 0.06318550106034526
+    y: 0.018786558120585363
+    z: 0.965924510222013
+    w: -0.2502889073188361
+
+platform
+it1
+  position:
+    x: 5.49
+    y: 1.26
+    z: 0.98
+  orientation:
+    x: 0.05060387003762118
+    y: 0.04387060236978493
+    z: -0.7095551199862337
+    w: 0.7014599325016385
+it2
+  position:
+    x: 5.42
+    y: 1.45
+    z: 0.97
+  orientation:
+    x: -0.044399141185597304
+    y: 0.00893117279072231
+    z: -0.7339342771249334
+    w: 0.6777089090442352
+it3
+  position:
+    x: 5.45
+    y: 1.21
+    z: 1.02
+  orientation:
+    x: 0.0001595946587705419
+    y: 0.02375217746987014
+    z: -0.8009830471763693
+    w: 0.598215889888112
+
+door
+it1
+  position:
+    x: 6.45
+    y: 2.72
+    z: 0.97
+  orientation:
+    x: -0.02131269555403667
+    y: 0.05062973708550628
+    z: 0.9471005285691299
+    w: -0.3162009876538764
+it2
+  position:
+    x: 6.42
+    y: 2.67
+    z: 0.96
+  orientation:
+    x: -0.031268703585232954
+    y: 0.03502103116732864
+    z: 0.9344169219027985
+    w: -0.3530734466584695
+it3
+  position:
+    x: 6.43
+    y: 2.69
+    z: 0.95
+  orientation:
+    x: -0.026643789303690477
+    y: 0.03844515148744251
+    z: 0.9429357383344411
+    w: -0.32967307363487713
+
+button
+it1
+  position:
+    x: 7.96
+    y: 2.72
+    z: 1.01
+  orientation:
+    x: -0.0060182617982888105
+    y: 0.04144030272178065
+    z: 0.9977658808453272
+    w: -0.0520551769152283
+it2
+  position:
+    x: 7.89
+    y: 2.72
+    z: 1.01
+  orientation:
+    x: -0.004659043734153017
+    y: 0.040590124652731686
+    z: 0.9970509609184363
+    w: -0.06496374337391156
+it3
+  position:
+    x: 7.85
+    y: 2.66
+    z: 0.98
+  orientation:
+    x: -0.005168897035844065
+    y: 0.021907294998073198
+    z: 0.9981057371155894
+    w: -0.05725740236429487
+
+
+also doing the testing we lost a wheel, the plastic wheel hub broke. We fixed it by hotglueing the wheel hub again but thats something may need to be changed in the future

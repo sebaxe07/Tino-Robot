@@ -2,6 +2,35 @@
 
 A comprehensive control system for Tino, a multi-component robot featuring a mobile base, articulated head, and leg mechanism.
 
+## Recent System Improvements
+
+### UWB Integration and Sensor Fusion (2025)
+
+The robot system has been enhanced with Ultra-Wideband (UWB) positioning capabilities:
+
+- **DWM1001 UWB Module**: Provides centimeter-level indoor positioning accuracy
+- **Advanced Sensor Fusion**: Combines UWB position data with RTAB-Map orientation for optimal localization
+- **Persistent Device Management**: Automatic setup of `/dev/ttyUWB` device symlinks
+- **Real-time Positioning**: Sub-meter accuracy in indoor environments without GPS
+
+### VR Interface Optimization (2025)
+
+The VR interface has been streamlined for better performance:
+
+- **Simplified Message Types**: Robot pose now uses `PoseStamped` instead of `PoseWithCovarianceStamped`
+- **Reduced Network Overhead**: Eliminated unnecessary covariance data for VR applications  
+- **Cleaner Integration**: Direct pose access without nested message structures
+- **Maintained Sensor Fusion**: UWB position + RTAB-Map orientation preserved
+
+### System Reliability Improvements (2025)
+
+Several enhancements improve overall system stability:
+
+- **Automated Audio Setup**: PulseAudio configuration runs automatically at startup
+- **Enhanced Device Management**: Comprehensive symlink setup for all USB devices
+- **Improved Launch Scripts**: tmux-based session management with split-pane monitoring
+- **Better Error Handling**: Robust fallback mechanisms for sensor data loss
+
 ## Project Overview
 
 Tino Robot has evolved from a Raspberry Pi-controlled system to a modern ROS2-based implementation:
@@ -103,7 +132,7 @@ The Tino ROS2 system consists of several interconnected nodes:
 - **/localization_pose** (PoseWithCovarianceStamped): Robot's position from SLAM
 - **/UWB/Pos** (Pose): UWB positioning data for sensor fusion
 - **/UWB/Ranges** (Range): UWB range measurements from anchor nodes
-- **/vr_in/robot_pose** (PoseWithCovarianceStamped): Fused robot pose (RTAB orientation + UWB position)
+- **/vr_in/robot_pose** (PoseStamped): Fused robot pose (RTAB orientation + UWB position)
 - **/audio/mic_input** and **/audio/vr_output** (Int16MultiArray): Audio data streams
 
 ### Sensor Fusion Architecture
@@ -583,27 +612,25 @@ For developers integrating with the Unity VR system, here are the message struct
 
 ### Messages to Receive in Unity from ROS2
 
-1. **Robot Pose** (`/vr_in/robot_pose`, geometry_msgs/msg/PoseWithCovarianceStamped)
-   - Provides the current position and orientation of the robot
+1. **Robot Pose** (`/vr_in/robot_pose`, geometry_msgs/msg/PoseStamped)
+   - Provides the current position and orientation of the robot (fused from UWB position and RTAB-Map orientation)
    - Message structure:
    ```
-   geometry_msgs/msg/PoseWithCovarianceStamped:
+   geometry_msgs/msg/PoseStamped:
      std_msgs/Header header
        uint32 seq
        time stamp
        string frame_id
-     geometry_msgs/PoseWithCovariance pose
-       geometry_msgs/Pose pose
-         geometry_msgs/Point position
-           float64 x
-           float64 y
-           float64 z
-         geometry_msgs/Quaternion orientation
-           float64 x
-           float64 y
-           float64 z
-           float64 w
-       float64[36] covariance
+     geometry_msgs/Pose pose
+       geometry_msgs/Point position
+         float64 x    # UWB position data (when available)
+         float64 y    # UWB position data (when available)
+         float64 z    # UWB position data (when available)
+       geometry_msgs/Quaternion orientation
+         float64 x    # RTAB-Map orientation
+         float64 y    # RTAB-Map orientation
+         float64 z    # RTAB-Map orientation
+         float64 w    # RTAB-Map orientation
    ```
 
 2. **Human Position** (`/vr_in/human_position`, geometry_msgs/msg/PoseStamped)

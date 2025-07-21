@@ -12,5 +12,6 @@
         "cmath": "cpp",
         "chrono": "cpp",
         "complex": "cpp"
-    }
+    },
+    "cmake.ignoreCMakeListsMissing": true
 }

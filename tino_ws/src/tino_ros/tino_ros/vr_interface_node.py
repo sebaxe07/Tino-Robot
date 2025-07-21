@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 import rclpy.logging
-from geometry_msgs.msg import PoseWithCovarianceStamped, Twist, PoseStamped, PoseArray
+from geometry_msgs.msg import Twist, PoseStamped, PoseArray
 from std_msgs.msg import String, Int16MultiArray, Float32MultiArray
 from std_srvs.srv import Empty
 from visualization_msgs.msg import MarkerArray
@@ -40,7 +40,7 @@ class VRInterfaceNode(Node):
         
         # Subscribe to robot pose from controller
         self.pose_sub = self.create_subscription(
-            PoseWithCovarianceStamped,
+            PoseStamped,
             '/vr_in/robot_pose', 
             self.pose_callback,
             10)
@@ -440,8 +440,8 @@ class VRInterfaceNode(Node):
             
             # 2. Robot pose (4 floats: x, y, z, w)
             if self.latest_robot_pose:
-                pos = self.latest_robot_pose.pose.pose.position
-                ori = self.latest_robot_pose.pose.pose.orientation
+                pos = self.latest_robot_pose.pose.position
+                ori = self.latest_robot_pose.pose.orientation
                 data_floats.extend([pos.x, pos.y, ori.z, ori.w])
             else:
                 # Default values if no pose available

@@ -23,7 +23,7 @@ class RobotControllerNode(Node):
         self.head_pub = self.create_publisher(Twist, 'head_cmd', 10)
 
         self.pose_pub = self.create_publisher(
-            PoseWithCovarianceStamped, '/vr_in/robot_pose', 10)
+            PoseStamped, '/vr_in/robot_pose', 10)
             
         # Publisher for human position to VR interface
         self.human_position_pub = self.create_publisher(
@@ -100,11 +100,16 @@ class RobotControllerNode(Node):
         self.current_rtab_orientation = None
         self.rtab_orientation_received = False
         
-        # Store last 5 positions for tracking validation
+        # Store last 5 positions for tracking validation and orientation estimation
         self.position_history = []
         self.max_history_size = 5
-        self.tracking_lost = False
+        self.rtab_orientation_lost = False
         self.position_tolerance = 1.0  # ±1 meter tolerance for x and y
+        
+        # Temporary orientation estimation when RTAB-Map is lost
+        self.estimated_orientation = None
+        self.last_valid_rtab_orientation = None
+        self.orientation_estimation_active = False
         
         # Store the latest human position information
         self.human_position = None
@@ -125,7 +130,7 @@ class RobotControllerNode(Node):
         self.skeleton_publish_rate = 1.0 / rate_hz
         self.skeleton_timer = self.create_timer(self.skeleton_publish_rate, self.publish_skeleton_data)
         
-        self.get_logger().info(f'Robot controller node initialized with localization, UWB positioning, audio, and human skeleton tracking (skeleton publish rate: {1.0/self.skeleton_publish_rate:.1f}Hz)')
+        self.get_logger().info(f'Robot controller node initialized with UWB positioning, RTAB-Map orientation (with movement-based fallback), audio, and human skeleton tracking (skeleton publish rate: {1.0/self.skeleton_publish_rate:.1f}Hz)')
         
     def pose_callback(self, msg):
         """Process incoming localization pose data"""
@@ -134,31 +139,45 @@ class RobotControllerNode(Node):
         
         # Check for the specific values indicating lost odometry
         if (orientation.x == 1.0 and orientation.y == 0.0 and orientation.z == 0.0 and orientation.w == 0.0):
-            self.get_logger().warn('Detected odometry loss! Attempting to reset odometry...')
-            self.tracking_lost = True
+            self.get_logger().warn('Detected RTAB-Map orientation loss! Using estimated orientation from movement direction...')
+            self.rtab_orientation_lost = True
+            self.orientation_estimation_active = True
             self.reset_odometry()
-            return  # Don't process this pose
+            
+            # Don't return - we still want to process position and use estimated orientation
         
-        # If tracking was lost, check if the new position is reasonable
-        if self.tracking_lost:
-            if not self._is_position_reasonable(position):
-                self.get_logger().debug(f'Position not reasonable after tracking loss: ({position.x:.2f}, {position.y:.2f}), skipping...')
-                return  # Don't process this pose
+        # If RTAB-Map orientation was lost, check if it has recovered
+        if self.rtab_orientation_lost:
+            if self._is_orientation_valid(orientation):
+                self.get_logger().info('RTAB-Map orientation recovered! Switching back to RTAB-Map orientation.')
+                self.rtab_orientation_lost = False
+                self.orientation_estimation_active = False
+                # Store the recovered orientation as our new baseline
+                self.last_valid_rtab_orientation = orientation
             else:
-                self.get_logger().info('Tracking recovered! Position is reasonable, resuming pose publishing.')
-                self.tracking_lost = False
+                self.get_logger().debug('RTAB-Map orientation still invalid, continuing with estimated orientation')
         
-        # Store position in history (before rotation)
-        self._update_position_history(position)
+        # Store position in history (before rotation) - always do this for UWB and orientation estimation
+        # Use UWB position if available for more accurate movement tracking
+        if self.uwb_position_received and self.current_uwb_position is not None:
+            self._update_position_history(self.current_uwb_position)
+        else:
+            self._update_position_history(position)
         
-        # Store RTAB-Map orientation for sensor fusion
-        self.current_rtab_orientation = orientation
-        self.rtab_orientation_received = True
+        # Store RTAB-Map orientation for sensor fusion (if valid)
+        if not self.rtab_orientation_lost:
+            self.current_rtab_orientation = orientation
+            self.last_valid_rtab_orientation = orientation
+            self.rtab_orientation_received = True
         
-        # Apply 60-degree rotation to align with map orientation
-        rotated_msg = self._apply_rotation_to_pose(msg, 11.5)
+        # Apply rotation to align with map orientation (only if using RTAB-Map data)
+        if not self.rtab_orientation_lost:
+            rotated_msg = self._apply_rotation_to_pose(msg, 11.5)
+        else:
+            # Create a dummy message for consistent processing
+            rotated_msg = msg
         
-        # Create fused pose using UWB position if available
+        # Create fused pose using UWB position and appropriate orientation
         fused_msg = self._create_fused_pose(rotated_msg)
         
         self.current_pose = fused_msg
@@ -167,22 +186,17 @@ class RobotControllerNode(Node):
         # Log first pose received and then periodically
         if not hasattr(self, 'pose_count'):
             self.pose_count = 0
-            self.get_logger().info('First localization pose received (with 20° rotation applied and UWB fusion)')
+            orientation_source = "estimated from movement" if self.orientation_estimation_active else "RTAB-Map"
+            self.get_logger().info(f'First localization pose received (with UWB position and {orientation_source} orientation)')
             ## Log the initial pose
-            pos = fused_msg.pose.pose.position
-            ori = fused_msg.pose.pose.orientation
+            pos = fused_msg.pose.position
+            ori = fused_msg.pose.orientation
             self.get_logger().info(
                 f'Initial Fused Pose: Position ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f}), '
-                f'Orientation ({ori.x:.2f}, {ori.y:.2f}, {ori.z:.2f}, {ori.w:.2f})'
+                f'Orientation ({ori.x:.2f}, {ori.y:.2f}, {ori.z:.2f}, {ori.w:.2f}) - Source: {orientation_source}'
             )
         
         self.pose_count += 1
-        pos = fused_msg.pose.pose.position
-        ori = fused_msg.pose.pose.orientation
-        # self.get_logger().info(
-        #     f'Fused Pose update: Position ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f}), '
-        #     f'Orientation ({ori.x:.2f}, {ori.y:.2f}, {ori.z:.2f}, {ori.w:.2f})'
-        # )
 
         self.pose_pub.publish(fused_msg)
     
@@ -199,28 +213,47 @@ class RobotControllerNode(Node):
     
     def _create_fused_pose(self, rtab_pose_msg):
         """
-        Create a fused pose using UWB position and RTAB-Map orientation
+        Create a fused pose using UWB position and appropriate orientation
         
         Args:
-            rtab_pose_msg: PoseWithCovarianceStamped from RTAB-Map (already rotated)
+            rtab_pose_msg: PoseWithCovarianceStamped from RTAB-Map (already rotated if valid)
             
         Returns:
-            PoseWithCovarianceStamped: Fused pose message
+            PoseStamped: Fused pose message
         """
-        # Create a copy of the RTAB-Map message
-        fused_msg = PoseWithCovarianceStamped()
+        # Create a simplified pose message
+        fused_msg = PoseStamped()
         fused_msg.header = rtab_pose_msg.header
-        fused_msg.pose.covariance = rtab_pose_msg.pose.covariance
         
-        # Use RTAB-Map orientation (already rotated)
-        fused_msg.pose.pose.orientation = rtab_pose_msg.pose.pose.orientation
+        # Determine which orientation to use
+        if self.orientation_estimation_active:
+            # Use estimated orientation from movement direction
+            estimated_orientation = self._estimate_orientation_from_movement()
+            if estimated_orientation is not None:
+                fused_msg.pose.orientation = estimated_orientation
+                orientation_source = "movement estimation"
+            elif self.last_valid_rtab_orientation is not None:
+                # Fall back to last known valid orientation
+                fused_msg.pose.orientation = self.last_valid_rtab_orientation
+                orientation_source = "last valid RTAB-Map"
+            else:
+                # Default to identity quaternion
+                fused_msg.pose.orientation.x = 0.0
+                fused_msg.pose.orientation.y = 0.0
+                fused_msg.pose.orientation.z = 0.0
+                fused_msg.pose.orientation.w = 1.0
+                orientation_source = "identity (no data)"
+        else:
+            # Use RTAB-Map orientation (already rotated)
+            fused_msg.pose.orientation = rtab_pose_msg.pose.pose.orientation
+            orientation_source = "RTAB-Map"
         
         # Use UWB position if available, otherwise fall back to RTAB-Map position
         if self.uwb_position_received and self.current_uwb_position is not None:
             # Use UWB position
-            fused_msg.pose.pose.position.x = self.current_uwb_position.x
-            fused_msg.pose.pose.position.y = self.current_uwb_position.y
-            fused_msg.pose.pose.position.z = self.current_uwb_position.z
+            fused_msg.pose.position.x = self.current_uwb_position.x
+            fused_msg.pose.position.y = self.current_uwb_position.y
+            fused_msg.pose.position.z = self.current_uwb_position.z
             
             # Log fusion info (only occasionally to avoid spam)
             if hasattr(self, 'fusion_log_counter'):
@@ -232,11 +265,11 @@ class RobotControllerNode(Node):
                 self.get_logger().info(
                     f'Sensor Fusion: Using UWB position ({self.current_uwb_position.x:.2f}, '
                     f'{self.current_uwb_position.y:.2f}, {self.current_uwb_position.z:.2f}) '
-                    f'with RTAB-Map orientation'
+                    f'with {orientation_source} orientation'
                 )
         else:
             # Fall back to RTAB-Map position
-            fused_msg.pose.pose.position = rtab_pose_msg.pose.pose.position
+            fused_msg.pose.position = rtab_pose_msg.pose.pose.position
             
             if hasattr(self, 'fallback_log_counter'):
                 self.fallback_log_counter += 1
@@ -244,7 +277,7 @@ class RobotControllerNode(Node):
                 self.fallback_log_counter = 0
                 
             if self.fallback_log_counter % 50 == 0:  # Log every 50th message
-                self.get_logger().warn('Sensor Fusion: UWB position not available, using RTAB-Map position')
+                self.get_logger().warn(f'Sensor Fusion: UWB position not available, using RTAB-Map position with {orientation_source} orientation')
         
         return fused_msg
     
@@ -483,39 +516,63 @@ class RobotControllerNode(Node):
             
         self.get_logger().debug(f'Position history updated: {len(self.position_history)} positions stored')
     
-    def _is_position_reasonable(self, position):
+    def _is_orientation_valid(self, orientation):
         """
-        Check if the given position is reasonable compared to recent history
-
+        Check if the given orientation is valid (not the lost odometry indicator)
+        
         Args:
-            position: geometry_msgs.msg.Point - The position to validate
+            orientation: geometry_msgs.msg.Quaternion - The orientation to validate
             
         Returns:
-            bool: True if position is reasonable, False otherwise
+            bool: True if orientation is valid, False if it indicates lost odometry
         """
-        if not self.position_history:
-            # No history yet, accept the position
-            self.get_logger().debug('No position history available, accepting position')
-            return True
-            
-        # Check if the position is within tolerance of any recent position
-        for hist_x, hist_y in self.position_history:
-            x_diff = abs(position.x - hist_x)
-            y_diff = abs(position.y - hist_y)
-            
-            if x_diff <= self.position_tolerance and y_diff <= self.position_tolerance:
-                self.get_logger().debug(
-                    f'Position ({position.x:.2f}, {position.y:.2f}) is reasonable '
-                    f'(within {self.position_tolerance}m of ({hist_x:.2f}, {hist_y:.2f}))'
-                )
-                return True
+        # Check for the specific values indicating lost odometry
+        return not (orientation.x == 1.0 and orientation.y == 0.0 and 
+                   orientation.z == 0.0 and orientation.w == 0.0)
+    
+    def _estimate_orientation_from_movement(self):
+        """
+        Estimate orientation from recent movement direction
         
-        # Position is not close to any recent position
+        Returns:
+            geometry_msgs.msg.Quaternion: Estimated orientation quaternion, or None if not enough data
+        """
+        if len(self.position_history) < 2:
+            self.get_logger().debug('Not enough position history for orientation estimation')
+            return None
+            
+        # Get the most recent positions for movement calculation
+        current_pos = self.position_history[-1]
+        previous_pos = self.position_history[-2]
+        
+        # Calculate movement vector
+        dx = current_pos[0] - previous_pos[0]
+        dy = current_pos[1] - previous_pos[1]
+        
+        # Check if there's significant movement
+        movement_magnitude = math.sqrt(dx*dx + dy*dy)
+        if movement_magnitude < 0.05:  # Less than 5cm movement
+            self.get_logger().debug(f'Insufficient movement for orientation estimation: {movement_magnitude:.3f}m')
+            return None
+            
+        # Calculate yaw angle from movement direction
+        yaw = math.atan2(dy, dx)
+        
+        # Convert yaw to quaternion (rotation around Z-axis)
+        from geometry_msgs.msg import Quaternion
+        estimated_quat = Quaternion()
+        estimated_quat.x = 0.0
+        estimated_quat.y = 0.0
+        estimated_quat.z = math.sin(yaw / 2.0)
+        estimated_quat.w = math.cos(yaw / 2.0)
+        
         self.get_logger().debug(
-            f'Position ({position.x:.2f}, {position.y:.2f}) is NOT reasonable. '
-            f'Recent positions: {self.position_history}'
+            f'Estimated orientation from movement: dx={dx:.3f}, dy={dy:.3f}, '
+            f'yaw={math.degrees(yaw):.1f}°, quat=({estimated_quat.x:.3f}, {estimated_quat.y:.3f}, '
+            f'{estimated_quat.z:.3f}, {estimated_quat.w:.3f})'
         )
-        return False
+        
+        return estimated_quat
 
 def main(args=None):
     rclpy.init(args=args)

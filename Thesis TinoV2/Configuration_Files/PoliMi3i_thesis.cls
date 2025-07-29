@@ -31,7 +31,7 @@
     \latexchapter{#1}
     \renewcommand{\headrulewidth}{0pt} %removing the horizontal line in the header
     %\addcontentsline{toc}{chapter}{#1} % Also adds the chapter name to the Contents
-    \fancyhead[LO, RE]{ \textbf{\thechapter\hsp{|   }\hsp \leftmark}}% Header
+    \fancyhead[LO, RE]{ \textbf{\textcolor{bluepoli}\thechapter\hsp\textcolor{bluepoli}{|   }\hsp \leftmark}}% Header
     \fancyhead[LE, RO]{\thepage}
     \vspace{-1cm}
 }
@@ -108,34 +108,32 @@
 	\begin{titlepage}
 		\AddToShipoutPicture*{\BackgroundPicTR}
 			\vfill
-        \begin{minipage}{0.95\textwidth}
+			%\begin{minipage}{0.95\textwidth}
+			\begin{minipage}{0.95\textwidth}
             \includegraphics[trim={1.2cm 0 0 0},clip, width=0.7\textwidth]{Images/02_ING_IND_INFORMAZIONE_COL_POSITIVO.eps}
             \hfill
             \\
-			\vspace{1cm}
-			\begin{center}
-            {\color{bluepoli} \bfseries \large{\textsc{Tesi di Laurea Magistrale in\\ \course}}\par}
-			
-            %\end{center}
-			\vspace{1cm}
-			{{\singlespacing \huge \bfseries \thesistitle \par}}	
+			\vspace{2.5cm}
+			\\
+			{{\color{bluepoli} \singlespacing \huge \bfseries \thesistitle \par}}	
+			\vspace{1.5cm}
+			{\color{bluepoli} \bfseries \large{\textsc{Tesi di Laurea Magistrale in\\ \course}}\par}
 			\vspace{1.5 cm}
-            \end{center}
-			{\color{black} Author:\vspace{0.1cm}\\
-            {\large \bfseries{\name}}\vspace{0.5cm}\\
-            \normalsize
-            Student ID:\vspace{0.1cm}\\
-            \bfseries{\ID}
-            }
-            %Student ID: \textbf{{\ID}}
+			{\color{black} \Large {Author:} \bfseries{\name}}
 			\end{minipage}
 			\\
 			\vspace*{\fill}
 			\\
 			\begin{minipage}{0.85\textwidth}
-			\color{black}Advisor:\vspace{0.1cm}\\{\bfseries{\advisor}}\vspace{0.25cm}
+			\normalsize{
+			Student ID: {\ID}
 			\\
-			Academic Year:\vspace{0.1cm}\\{\bfseries{\academicyear}}
+			Advisor: {\advisor}
+			\\
+			Co-advisors: {\coadvisor}
+			\\
+			Academic Year: {\academicyear}
+			}
 			\end{minipage}
 	\end{titlepage}
 }

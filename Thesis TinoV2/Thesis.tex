@@ -135,13 +135,13 @@
 \frontmatter % Use roman page numbering style (i, ii, iii, iv...) for the preamble pages
 
 \puttitle{
-	title=Title of the thesis, % Title of the thesis
-	name=Name Surname, % Author Name and Surname
+	title={Tino V2, the revenge of the maze (Temporal Title)}, % Title of the thesis
+	name=Sebastian Enrique Perea Lopez, % Author Name and Surname
 	course=Computer Science and Engineering \\Ingegneria Informatica, % Study Programme (in Italian)
-	ID  =  XXXXXX,  % Student ID number (numero di matricola)
-	advisor= Prof. Name Surname, % Supervisor name
-	coadvisor={}, % Co-Supervisor name, remove this line if there is none
-	academicyear={20xx-xx},  % Academic Year
+	ID  =  10986638,  % Student ID number (numero di matricola)
+	advisor= Prof. Andrea Bonarini, % Supervisor name
+	coadvisor={Federico Espositi}, % Co-Supervisor name, remove this line if there is none
+	academicyear={2024-25},  % Academic Year
 } % These info will be put into your Title page 
 
 %----------------------------------------------------------------------------
@@ -199,17 +199,44 @@ Qui va inserito l'abstract in italiano.
 %
 % Especially for long thesis, we recommend you the second option.
 
-\chapter{Pre Tino \& goal}
-\chapter{SLAM, process and R\&D}
-\chapter{General sensor stuff speaker, mic, VR}
-\chapter{Legacy to ROS2 migration \& ROS arquitecture}
-\chapter{Physical changes}
-\chapter{Testing}
 
 \addtocontents{toc}{\vspace{2em}} % Add a gap in the Contents, for aesthetics
 \mainmatter % Begin numeric (1,2,3...) page numbering
 
-\input{Chapters/temporalRD}
+
+% Chapter 1: Background and Objectives
+\chapter{Introduction and Project Overview}
+\input{Chapters/chapter1_introduction}
+
+% Chapter 2: State of the Art and Technology Selection
+\chapter{Technology Research and Selection}
+\input{Chapters/chapter2_technology_research}
+
+% Chapter 3: System Architecture and ROS2 Migration
+\chapter{System Architecture and Software Migration}
+\input{Chapters/chapter3_system_architecture}
+
+% Chapter 4: SLAM Implementation and Localization
+\chapter{SLAM Implementation and Sensor Fusion}
+\input{Chapters/chapter4_slam_sensor_fusion}
+
+% Chapter 5: Hardware Redesign and Mechanical Improvements
+\chapter{Hardware Redesign and Mechanical Improvements}
+\input{Chapters/chapter5_hardware_redesign}
+
+% Chapter 6: Human Detection and Pose Estimation
+\chapter{Human Detection and Pose Estimation}
+\input{Chapters/chapter6_human_detection}
+
+% Chapter 7: VR Integration and Movement Control
+\chapter{VR Integration and Atomic Movement System}
+\input{Chapters/chapter7_vr_integration}
+
+% Chapter 8: System Evaluation, Future Work and Conclusions
+\chapter{System Evaluation, Future Work and Conclusions}
+\input{Chapters/chapter8_evaluation_conclusions}
+
+% \input{Chapters/temporalRD}
 
 % --------------------------------------------------------------------------
 % NUMBERED CHAPTERS % Regular chapters following

@@ -2,63 +2,278 @@
 %% http://bibdesk.sourceforge.net/
 % Encoding: UTF-8
 
-@article{campos2021orbslam3,
-  title={ORB-SLAM3: An Accurate Open-Source Library for Visual, Visual-Inertial, and Multimap SLAM},
-  author={Campos, Carlos and Elvira, Richard and Rodríguez, Juan J Gómez and Montiel, José MM and Tardós, Juan D},
-  journal={IEEE Transactions on Robotics},
+@ARTICLE{durrant2006simultaneous,
+  author={Durrant-Whyte, H. and Bailey, T.},
+  journal={IEEE Robotics \& Automation Magazine}, 
+  title={Simultaneous localization and mapping: part I}, 
+  year={2006},
+  volume={13},
+  number={2},
+  pages={99-110},
+  keywords={Simultaneous localization and mapping;Mobile robots;Robotics and automation;History;Artificial intelligence;Navigation;Vehicles;Buildings;Bayesian methods;Particle filters},
+  doi={10.1109/MRA.2006.1638022}
+}
+
+@ARTICLE{scaramuzza2011visual,
+  author={Scaramuzza, Davide and Fraundorfer, Friedrich},
+  journal={IEEE Robotics \& Automation Magazine}, 
+  title={Visual Odometry [Tutorial]}, 
+  year={2011},
+  volume={18},
+  number={4},
+  pages={80-92},
+  keywords={Cameras;Wheels;Robot vision systems;Detectors;Motion estimation;Bundle adjustment},
+  doi={10.1109/MRA.2011.943233}
+}
+
+@INPROCEEDINGS{klein2007parallel,
+  author={Klein, Georg and Murray, David},
+  booktitle={2007 6th IEEE and ACM International Symposium on Mixed and Augmented Reality}, 
+  title={Parallel Tracking and Mapping for Small AR Workspaces}, 
+  year={2007},
+  volume={},
+  number={},
+  pages={225-234},
+  keywords={Robot vision systems;Cameras;Tracking;Yarn;Robustness;Layout;Simultaneous localization and mapping;Algorithm design and analysis;Concurrent computing;Handheld computers},
+  doi={10.1109/ISMAR.2007.4538852}
+}
+
+@ARTICLE{mur2015orb,
+  author={Mur-Artal, Raúl and Montiel, J. M. M. and Tardós, Juan D.},
+  journal={IEEE Transactions on Robotics}, 
+  title={ORB-SLAM: A Versatile and Accurate Monocular SLAM System}, 
+  year={2015},
+  volume={31},
+  number={5},
+  pages={1147-1163},
+  keywords={Simultaneous localization and mapping;Cameras;Optimization;Feature extraction;Visualization;Real-time systems;Computational modeling;Lifelong mapping;localization;monocular vision;recognition;simultaneous localization and mapping (SLAM);Lifelong mapping;localization;monocular vision;recognition;simultaneous localization and mapping (SLAM)},
+  doi={10.1109/TRO.2015.2463671}
+}
+
+@INPROCEEDINGS{geiger2011stereoscan,
+  author={Geiger, Andreas and Ziegler, Julius and Stiller, Christoph},
+  booktitle={2011 IEEE Intelligent Vehicles Symposium (IV)}, 
+  title={StereoScan: Dense 3d reconstruction in real-time}, 
+  year={2011},
+  volume={},
+  number={},
+  pages={963-968},
+  keywords={Three dimensional displays;Visualization;Real time systems;Image reconstruction;Stereo image processing;Cameras;Estimation},
+  doi={10.1109/IVS.2011.5940405}}
+
+@ARTICLE{campos2021orbslam3,
+  author={Campos, Carlos and Elvira, Richard and Rodríguez, Juan J. Gómez and M. Montiel, José M. and D. Tardós, Juan},
+  journal={IEEE Transactions on Robotics}, 
+  title={ORB-SLAM3: An Accurate Open-Source Library for Visual, Visual–Inertial, and Multimap SLAM}, 
   year={2021},
-  url={https://arxiv.org/abs/2007.11898}
+  volume={37},
+  number={6},
+  pages={1874-1890},
+  keywords={Simultaneous localization and mapping;Computer vision;Feature extraction;Inertial navigation;Robustness;Optimization;Computer vision;inertial navigation;simult- aneous localization and mapping},
+  doi={10.1109/TRO.2021.3075644}}
+
+@INPROCEEDINGS{forster2014svo,
+  author={Forster, Christian and Pizzoli, Matia and Scaramuzza, Davide},
+  booktitle={2014 IEEE International Conference on Robotics and Automation (ICRA)}, 
+  title={SVO: Fast semi-direct monocular visual odometry}, 
+  year={2014},
+  volume={},
+  number={},
+  pages={15-22},
+  keywords={Cameras;Three-dimensional displays;Feature extraction;Robustness;Motion estimation;Tracking;Optimization},
+  doi={10.1109/ICRA.2014.6906584}
+  }
+
+@misc{engel2017direct,
+      title={Direct Sparse Odometry}, 
+      author={Jakob Engel and Vladlen Koltun and Daniel Cremers},
+      year={2016},
+      eprint={1607.02565},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/1607.02565}, 
 }
 
-@inproceedings{forster2016svo,
-  title={SVO: Semidirect Visual Odometry for Monocular and Multicamera Systems},
-  author={Forster, Christian and Zhang, Zichao and Gassner, Michael and Werlberger, Manuel and Scaramuzza, Davide},
-  booktitle={IEEE Transactions on Robotics},
-  year={2016},
-  url={https://ieeexplore.ieee.org/document/7782863}
+@article{labbe2019rtab,
+  author = {Labbé, Mathieu and Michaud, François},
+  title = {RTAB-Map as an open-source lidar and visual simultaneous localization and mapping library for large-scale and long-term online operation},
+  journal = {Journal of Field Robotics},
+  volume = {36},
+  number = {2},
+  pages = {416-446},
+  keywords = {perception, position estimation, SLAM},
+  doi = {https://doi.org/10.1002/rob.21831},
+  url = {https://onlinelibrary.wiley.com/doi/abs/10.1002/rob.21831},
+  eprint = {https://onlinelibrary.wiley.com/doi/pdf/10.1002/rob.21831},
+  abstract = {Abstract Distributed as an open-source library since 2013, real-time appearance-based mapping (RTAB-Map) started as an appearance-based loop closure detection approach with memory management to deal with large-scale and long-term online operation. It then grew to implement simultaneous localization and mapping (SLAM) on various robots and mobile platforms. As each application brings its own set of constraints on sensors, processing capabilities, and locomotion, it raises the question of which SLAM approach is the most appropriate to use in terms of cost, accuracy, computation power, and ease of integration. Since most of SLAM approaches are either visual- or lidar-based, comparison is difficult. Therefore, we decided to extend RTAB-Map to support both visual and lidar SLAM, providing in one package a tool allowing users to implement and compare a variety of 3D and 2D solutions for a wide range of applications with different robots and sensors. This paper presents this extended version of RTAB-Map and its use in comparing, both quantitatively and qualitatively, a large selection of popular real-world datasets (e.g., KITTI, EuRoC, TUM RGB-D, MIT Stata Center on PR2 robot), outlining strengths, and limitations of visual and lidar SLAM configurations from a practical perspective for autonomous navigation applications.},
+  year = {2019}
 }
 
-@article{huang2018sensor,
-  title={Sensor Fusion for Mobile Robot Localization Using Extended Kalman Filter UWB ToF and ArUco Markers},
-  author={Huang, Lei and others},
-  journal={ResearchGate},
-  year={2018},
-  url={https://www.researchgate.net/publication/356744906_Sensor_Fusion_for_Mobile_Robot_Localization_Using_Extended_Kalman_Filter_UWB_ToF_and_ArUco_Markers}
+@Article{henry2012rgb,
+  title =        "RGB-D mapping: Using Kinect-style depth cameras for dense 3D modeling of indoor environments",
+  author =       "Peter Henry and Michael Krainin and Evan Herbst and Xiaofeng Ren and Dieter Fox",
+  journal =      "The International Journal of Robotics Research",
+  volume =       "31",
+  number =       "5",
+  pages =        "647--663",
+  year =         "2012",
+  publisher =    "SAGE Publications",
+  topic =        "SLAM",
+}
+
+@ARTICLE{gezici2005localization,
+  author={Gezici, S. and Zhi Tian and Giannakis, G.B. and Kobayashi, H. and Molisch, A.F. and Poor, H.V. and Sahinoglu, Z.},
+  journal={IEEE Signal Processing Magazine}, 
+  title={Localization via ultra-wideband radios: a look at positioning aspects for future sensor networks}, 
+  year={2005},
+  volume={22},
+  number={4},
+  pages={70-84},
+  keywords={Ultra wideband technology;Bandwidth;Radar applications;Ultra wideband radar;FCC;Ultra wideband communication;Context;Standardization;Sensor systems;Land mobile radio cellular systems},
+  doi={10.1109/MSP.2005.1458289}}
+
+@ARTICLE{borenstein1996measurement,
+  author={Borenstein, J. and Liqiang Feng},
+  journal={IEEE Transactions on Robotics and Automation}, 
+  title={Measurement and correction of systematic odometry errors in mobile robots}, 
+  year={1996},
+  volume={12},
+  number={6},
+  pages={869-880},
+  keywords={Error correction;Mobile robots;Satellite navigation systems;Wheels;Frequency measurement;Calibration;Costs;Manufacturing;Monitoring;Intelligent robots},
+  doi={10.1109/70.544770}}
+
+@misc{lugaresi2019mediapipe,
+      title={MediaPipe: A Framework for Building Perception Pipelines}, 
+      author={Camillo Lugaresi and Jiuqiang Tang and Hadon Nash and Chris McClanahan and Esha Uboweja and Michael Hays and Fan Zhang and Chuo-Ling Chang and Ming Guang Yong and Juhyun Lee and Wan-Teh Chang and Wei Hua and Manfred Georg and Matthias Grundmann},
+      year={2019},
+      eprint={1906.08172},
+      archivePrefix={arXiv},
+      primaryClass={cs.DC},
+      url={https://arxiv.org/abs/1906.08172}, 
+}
+@misc{redmon2016you,
+      title={You Only Look Once: Unified, Real-Time Object Detection}, 
+      author={Joseph Redmon and Santosh Divvala and Ross Girshick and Ali Farhadi},
+      year={2016},
+      eprint={1506.02640},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/1506.02640}, 
+}
+@misc{ranftl2020towards,
+      title={Towards Robust Monocular Depth Estimation: Mixing Datasets for Zero-shot Cross-dataset Transfer}, 
+      author={René Ranftl and Katrin Lasinger and David Hafner and Konrad Schindler and Vladlen Koltun},
+      year={2020},
+      eprint={1907.01341},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/1907.01341}, 
+}
+
+@article{breazeal2003toward,
+title = {Toward sociable robots},
+journal = {Robotics and Autonomous Systems},
+volume = {42},
+number = {3},
+pages = {167-175},
+year = {2003},
+note = {Socially Interactive Robots},
+issn = {0921-8890},
+doi = {https://doi.org/10.1016/S0921-8890(02)00373-1},
+url = {https://www.sciencedirect.com/science/article/pii/S0921889002003731},
+author = {Cynthia Breazeal},
+keywords = {Sociable robots, Human–robot interaction, Humanoid robots, Facial expression, Social interaction},
+abstract = {This paper explores the topic of social robots—the class of robots that people anthropomorphize in order to interact with them. From the diverse and growing number of applications for such robots, a few distinct modes of interaction are beginning to emerge. We distinguish four such classes: socially evocative, social interface, socially receptive, and sociable. For the remainder of the paper, we explore a few key features of sociable robots that distinguish them from the others. We use the vocal turn-taking behavior of our robot, Kismet, as a case study to highlight these points.}
+}
+
+@book{mehrabian1971silent,
+  title={Silent Messages},
+  author={Mehrabian, A.},
+  isbn={9780534000592},
+  lccn={75166409},
+  url={https://books.google.com.co/books?id=Ast-AAAAMAAJ},
+  year={1971},
+  publisher={Wadsworth Publishing Company}
+}
+
+@article{ekman1971universals,
+author = {Ekman, Paul and Friesen, Wallace and O'Sullivan, Maureen and Chan, Anthony and Diacoyanni-Tarlatzis, Irene and Heider, Karl and Krause, Rainer and LeCompte, William and Pitcairn, Tom and Ricci Bitti, Pio and Scherer, Klaus and Tomita, Masatoshi and Tzavaras, Athanase},
+year = {1987},
+month = {10},
+pages = {712-7},
+title = {Universals and Cultural Differences in the Judgments of Facial Expressions of Emotion},
+volume = {53},
+journal = {Journal of personality and social psychology},
+doi = {10.1037/0022-3514.53.4.712}
+}
+
+@article{sheridan1992musings,
+author = {Sheridan, Thomas},
+year = {1992},
+month = {01},
+pages = {120-125},
+title = {Musings on Telepresence and Virtual Presence},
+volume = {1},
+journal = {Presence},
+doi = {10.1162/pres.1992.1.1.120}
+}
+
+@inbook{huang2021sensor,
+author = {Faria, Sílvia and Lima, José and Costa, Paulo},
+year = {2021},
+month = {01},
+pages = {235-250},
+title = {Sensor Fusion for Mobile Robot Localization Using Extended Kalman Filter, UWB ToF and ArUco Markers},
+isbn = {978-3-030-91884-2},
+doi = {10.1007/978-3-030-91885-9_17}
 }
 
 @article{ekf2021practice,
-  title={Extended Kalman Filter Sensor Fusion in Practice for Mobile Robot Localization},
-  author={Anonymous},
-  journal={IJACSA},
-  volume={13},
-  number={2},
-  year={2021},
-  url={https://thesai.org/Downloads/Volume13No2/Paper_4-Extended_Kalman_Filter_Sensor_Fusion_in_Practice.pdf}
+title = {Extended Kalman Filter Sensor Fusion in Practice for Mobile Robot Localization},
+journal = {International Journal of Advanced Computer Science and Applications},
+doi = {10.14569/IJACSA.2022.0130204},
+url = {http://dx.doi.org/10.14569/IJACSA.2022.0130204},
+year = {2022},
+publisher = {The Science and Information Organization},
+volume = {13},
+number = {2},
+author = {Alaa Aldeen Housein and Gao Xingyu and Weiming Li and Yang Huang}
 }
-
-@inproceedings{uwb2007localization,
-  title={A UWB-IR based Localization System for Indoor Robot Navigation},
-  author={Anonymous},
-  booktitle={IEEE International Conference},
+@INPROCEEDINGS{uwb2007localization,
+  author={Krishnan, Sivanand and Sharma, Pankaj and Guoping, Zhang and Woon, Ong Hwee},
+  booktitle={2007 IEEE International Conference on Ultra-Wideband}, 
+  title={A UWB based Localization System for Indoor Robot Navigation}, 
   year={2007},
-  url={https://ieeexplore.ieee.org/abstract/document/4380919}
+  volume={},
+  number={},
+  pages={77-82},
+  keywords={Robots;Navigation;Orbital robotics;Tracking;Communication system control;Antenna accessories;Radio frequency;Servomechanisms;Servomotors;Estimation error;UWB localization;robot navigation},
+  doi={10.1109/ICUWB.2007.4380919}
 }
 
 @article{chen2018uwb,
-  title={Robot vision ultra-wideband wireless sensor in non-cooperative industrial environments},
-  author={Chen, Rui and others},
-  journal={International Journal of Advanced Robotic Systems},
-  year={2018},
-  url={https://journals.sagepub.com/doi/full/10.1177/1729881418795767}
+author = {Galajda, Pavol and Galajdova, Alena and Slovak, Stanislav and Pecovsky, Martin and Drutarovský, Miloš and Sukop, Marek and Samaneh, Ihab},
+year = {2018},
+month = {09},
+pages = {172988141879576},
+title = {Robot vision ultra-wideband wireless sensor in non-cooperative industrial environments},
+volume = {15},
+journal = {International Journal of Advanced Robotic Systems},
+doi = {10.1177/1729881418795767}
 }
 
-@inproceedings{olson2011apriltag,
-  title={AprilTag: A Robust Fiducial System},
+@INPROCEEDINGS{olson2011apriltag,
   author={Olson, Edwin},
-  booktitle={IEEE International Conference on Robotics and Automation},
+  booktitle={2011 IEEE International Conference on Robotics and Automation}, 
+  title={AprilTag: A robust and flexible visual fiducial system}, 
   year={2011},
-  url={https://april.eecs.umich.edu/papers/details.php?name=olson2011tags}
-}
+  volume={},
+  number={},
+  pages={3400-3407},
+  keywords={Encoding;Visualization;Robustness;Payloads;Detectors;Image segmentation;Robots},
+  doi={10.1109/ICRA.2011.5979561}}
+
 
 @misc{optitrack2024robotics,
   title={OptiTrack for Robotics – Industrial use cases},
@@ -67,70 +282,93 @@
   url={https://www.naturalpoint.com/optitrack/applications/robotics/}
 }
 
-@article{uwbori2024,
-  title={UWBOri: enabling accurate orientation estimation with ultra-wideband signals},
-  author={Anonymous},
-  journal={HAL Science},
+@INPROCEEDINGS{uwbori2024,
+  author={Chang, Zhaoxin and Zhang, Fusang and Xiong, Jie and Xue, Xinyu and Wang, Zeyu and Jouaber, Badii and Zhang, Daqing},
+  booktitle={2024 IEEE Smart World Congress (SWC)}, 
+  title={UWBOri: Enabling Accurate Orientation Estimation with Ultra-wideband Signals}, 
   year={2024},
-  url={https://hal.science/hal-04754129/}
-}
+  volume={},
+  number={},
+  pages={386-393},
+  keywords={Location awareness;Technological innovation;Accuracy;Measurement units;Estimation;Interference;Inertial navigation;Internet of Things;Smart devices;Ultra wideband technology;Orientation;Ultra-wideband;Smart devices;Human-device interaction},
+  doi={10.1109/SWC62898.2024.00085}}
 
-@article{luo2020uwb,
-  title={UWB System for Indoor Positioning and Tracking With Arbitrary Target Orientation, Optimal Anchor Location, and Adaptive NLOS Mitigation},
-  author={Luo, Jingyu and others},
-  journal={IEEE Access},
+
+@ARTICLE{luo2020uwb,
+  author={Chen, Yu-Yao and Huang, Shih-Ping and Wu, Ting-Wei and Tsai, Wei-Ting and Liou, Chong-Yi and Mao, Shau-Gang},
+  journal={IEEE Transactions on Vehicular Technology}, 
+  title={UWB System for Indoor Positioning and Tracking With Arbitrary Target Orientation, Optimal Anchor Location, and Adaptive NLOS Mitigation}, 
   year={2020},
-  url={https://ieeexplore.ieee.org/abstract/document/8989827}
-}
+  volume={69},
+  number={9},
+  pages={9304-9314},
+  keywords={Antenna measurements;Ultra wideband antennas;Delay effects;Target tracking;Adaptive systems;Genetic algorithms;Ultra-wideband;circularly polarized;NLOS;genetic algorithm;CNN;LSTM;indoor tracking;wireless positioning},
+  doi={10.1109/TVT.2020.2972578}}
 
-@article{rpo2019uwb,
-  title={Measurement of Relative Position and Orientation using UWB},
-  author={Anonymous},
-  journal={IEEE},
+
+@INPROCEEDINGS{rpo2019uwb,
+  author={Theussl, Ernst-Johann and Ninevski, Dimitar and O’Leary, Paul},
+  booktitle={2019 IEEE International Instrumentation and Measurement Technology Conference (I2MTC)}, 
+  title={Measurement of Relative Position and Orientation using UWB}, 
   year={2019},
-  url={https://ieeexplore.ieee.org/abstract/document/8827149}
-}
+  volume={},
+  number={},
+  pages={1-6},
+  keywords={Antenna measurements;Position measurement;Containers;Measurement uncertainty;Distance measurement;Standards;Gaussian distribution;Positioning;orientation;Localization;Ultra wideband technology;Location awareness},
+  doi={10.1109/I2MTC.2019.8827149}}
+
 
 @article{thermal2019detection,
-  title={Real-Time Implementation of Human Detection in Thermal Imagery Based on CNN},
-  author={Anonymous},
-  journal={ResearchGate},
-  year={2019},
-  url={https://www.researchgate.net/publication/330762720_Real-Time_Implementation_of_Human_Detection_in_Thermal_Imagery_Based_on_CNN}
+author = {Shahid, Nazeer and Yu, Gwang-Hyun and Trinh, Dat and Sin, Do-Seong and Kim, Jin-Young},
+year = {2019},
+month = {01},
+pages = {107-121},
+title = {Real-Time Implementation of Human Detection in Thermal Imagery Based on CNN},
+volume = {17},
+journal = {The Journal of Korean Institute of Information Technology},
+doi = {10.14801/jkiit.2019.17.1.107}
 }
 
 @article{ultrasonic2020tracking,
-  title={Ultrasonic Human Tracking},
-  author={Anonymous},
-  journal={Korea Science},
-  year={2020},
-  note={In Korean},
-  url={https://koreascience.kr/article/JAKO202019962560668.pdf}
+author = {Tai, W. and Ilias, Bukhari and Abdul Shukor, Shazmin and Abdul Rahim, Norasmadi and Markom, Marni},
+year = {2019},
+month = {12},
+pages = {012045},
+title = {A Study of Ultrasonic Sensor Capability in Human Following Robot System},
+volume = {705},
+journal = {IOP Conference Series: Materials Science and Engineering},
+doi = {10.1088/1757-899X/705/1/012045}
 }
 
-@article{wang2022yolov7,
-  title={YOLOv7: Trainable bag-of-freebies sets new state-of-the-art for real-time object detection},
-  author={Wang, Chien-Yao and Bochkovskiy, Alexey and Liao, Hong-Yuan Mark},
-  journal={arXiv preprint arXiv:2207.02696},
-  year={2022},
-  url={https://arxiv.org/abs/2207.02696}
+@misc{wang2022yolov7,
+      title={YOLOv7: Trainable bag-of-freebies sets new state-of-the-art for real-time object detectors}, 
+      author={Chien-Yao Wang and Alexey Bochkovskiy and Hong-Yuan Mark Liao},
+      year={2022},
+      eprint={2207.02696},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2207.02696}, 
 }
-
-@article{cao2019openpose,
-  title={OpenPose: Real-Time Human Pose Detection},
-  author={Cao, Zhe and Hidalgo, Gines and Simon, Tomas and Wei, Shih-En and Sheikh, Yaser},
-  journal={arXiv preprint arXiv:1812.08008},
-  year={2019},
-  url={https://arxiv.org/abs/1812.08008}
+@misc{cao2019openpose,
+      title={OpenPose: Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields}, 
+      author={Zhe Cao and Gines Hidalgo and Tomas Simon and Shih-En Wei and Yaser Sheikh},
+      year={2019},
+      eprint={1812.08008},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/1812.08008}, 
 }
-
-@article{azure2021kinect,
-  title={Azure Kinect for Robotics – Performance Analysis of Body Tracking},
-  author={Anonymous},
-  journal={IEEE},
+@INPROCEEDINGS{azure2021kinect,
+  author={Romeo, Laura and Marani, Roberto and Malosio, Matteo and Perri, Anna G. and D’Orazio, Tiziana},
+  booktitle={2021 29th Mediterranean Conference on Control and Automation (MED)}, 
+  title={Performance Analysis of Body Tracking with the Microsoft Azure Kinect}, 
   year={2021},
-  url={https://ieeexplore.ieee.org/abstract/document/9480177}
-}
+  volume={},
+  number={},
+  pages={572-577},
+  keywords={Uncertainty;Service robots;Pose estimation;Lighting;Cameras;Skeleton;Real-time systems},
+  doi={10.1109/MED51440.2021.9480177}}
+
 
 @article{yan2019lidar,
   title={LiDAR-based Human detection},
@@ -140,13 +378,17 @@
   url={https://link.springer.com/article/10.1007/s10514-019-09883-y}
 }
 
-@article{rfsensing2022,
-  title={RF-Sensing: A New Way to Observe Surroundings},
-  author={Anonymous},
-  journal={IEEE},
+@ARTICLE{rfsensing2022,
+  author={Khunteta, Shubham and Saikrishna, Pedamalli and Agrawal, Avani and Kumar, Ashwini and Chavva, Ashok Kumar Reddy},
+  journal={IEEE Access}, 
+  title={RF-Sensing: A New Way to Observe Surroundings}, 
   year={2022},
-  url={https://ieeexplore.ieee.org/abstract/document/9982449}
-}
+  volume={10},
+  number={},
+  pages={129653-129665},
+  keywords={Sensors;Radio frequency;Task analysis;Classification tree analysis;Millimeter wave communication;Chirp;Radar;5G;6G;AI;activity recognition;deep learning;FMCW;localization;mmWave;machine learning;person identification;RF-sensing;RADAR;sensing},
+  doi={10.1109/ACCESS.2022.3228639}}
+
 
 @misc{orbslam3github,
   title={ORB-SLAM3 GitHub Repository},
@@ -160,4 +402,13 @@
   author={UZH-RPG},
   year={2024},
   url={https://github.com/uzh-rpg/rpg_svo_pro_open}
+}
+
+@mastersthesis{cardillo2024thesis,
+  title={Conveying Illusion of Life and Empathy Through a Non-Anthropomorphic Robot and Non-Verbal Communication: The Tino Experience},
+  author={Cardillo},
+  year={2024},
+  school={Politecnico di Milano},
+  type={Master's thesis},
+  note={Previous work on the original Tino robot system}
 }

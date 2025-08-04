@@ -1,14 +1,143 @@
-\section{Social Robotics Foundations}
-This section will establish the theoretical and practical foundations of social robotics that underpin the Tino V2 project development. The evolution of social robotics will be traced, covering the progression from industrial automation to human-centered robotic systems designed for interaction, companionship, and assistance in social environments, the emergence of telepresence robotics as a solution for remote communication and presence, and the integration of artificial intelligence and machine learning technologies to enable more natural and responsive human-robot interactions. The key characteristics of effective social robots will be examined, including the importance of predictable and reliable behavior that builds user trust and confidence, the need for intuitive interaction modalities that accommodate users with varying technical expertise, and the critical role of robust localization and navigation systems that enable autonomous operation in human environments. The current research landscape will be surveyed, covering major social robotics platforms and their capabilities, ongoing research in human-robot interaction psychology and user experience design, and the technological challenges that continue to limit widespread adoption of social robotics systems.
+\section{Simultaneous Localization and Mapping (SLAM) Technologies}
+Simultaneous Localization and Mapping (SLAM) represents one of the fundamental challenges in autonomous mobile robotics, particularly for social robots operating in dynamic indoor environments~\cite{durrant2006simultaneous}. SLAM systems enable robots to navigate in unknown environments while building environmental maps, providing the dual advantage of localization and environmental perception~\cite{scaramuzza2011visual}. This section provides a comprehensive analysis of available SLAM and localization technologies, examining their theoretical foundations, practical implementations, and suitability for social robotics applications.
 
-\section{Simultaneous Localization and Mapping (SLAM)}
-This section will provide comprehensive coverage of SLAM technologies and their application to mobile robotics, with particular focus on the challenges and solutions relevant to indoor social robot operation. The SLAM problem formulation will be established, covering the fundamental challenge of simultaneously building a map of an unknown environment while determining the robot's location within that environment, the mathematical foundations including probabilistic approaches and uncertainty representation, and the trade-offs between computational complexity and accuracy that affect real-time implementation. Visual SLAM approaches will be examined in detail, covering feature-based methods like ORB-SLAM that rely on distinctive visual landmarks for tracking and mapping, direct methods that use raw pixel intensities for dense reconstruction, and hybrid approaches that combine the advantages of both feature-based and direct techniques. The specific capabilities and limitations of RTABMap will be analyzed, including its strength in loop closure detection that enables long-term mapping without drift accumulation, the RGB-D processing pipeline that leverages depth information for robust feature matching, and the memory management strategies that allow operation in large environments without excessive computational overhead. Common challenges in indoor SLAM will be addressed, covering the impact of dynamic environments with moving objects and people, the difficulties posed by textureless surfaces and repetitive patterns that provide insufficient visual features, and the accumulation of odometry drift that can lead to mapping inconsistencies over extended operation periods.
+\subsection{Feature-Based SLAM Systems}
+Monocular visual SLAM systems, exemplified by PTAM~\cite{klein2007parallel} and later ORB-SLAM~\cite{mur2015orb}, utilize feature extraction and matching to estimate camera motion and reconstruct environmental structure. While computationally efficient, these systems suffer from inherent scale ambiguity and require careful initialization procedures to establish metric scale.
 
-\section{Ultra-Wideband (UWB) Positioning Technology}
-This section will examine UWB positioning technology as a complementary localization solution that addresses the limitations of visual SLAM in indoor environments. The UWB technology fundamentals will be established, covering the physics of ultra-wideband radio signals and their propagation characteristics that enable precise time-of-flight measurements, the anchor-based positioning architecture that provides absolute coordinate references, and the centimeter-level accuracy achievable under ideal conditions. The advantages of UWB for indoor robotics will be detailed, including immunity to visual challenges like poor lighting or featureless environments that can disrupt camera-based systems, the ability to provide absolute positioning without drift accumulation, and the low power consumption that makes UWB suitable for battery-powered mobile robots. The integration challenges will be addressed, covering the calibration requirements for anchor placement and coordinate system alignment, the impact of non-line-of-sight conditions and multipath effects in indoor environments, and the need for sensor fusion techniques to combine UWB position data with orientation information from other sources. Practical implementation considerations will be examined, including the setup and maintenance requirements for UWB anchor infrastructure, the trade-offs between positioning accuracy and update rates, and the strategies for handling temporary signal loss or degraded accuracy conditions.
+ORB-SLAM3~\cite{campos2021orbslam3} represents the current state-of-the-art in feature-based SLAM systems, supporting multiple sensor configurations including monocular, stereo, and RGB-D cameras. The system demonstrates robust performance in feature-rich environments through sophisticated ORB feature matching algorithms and advanced loop closure detection mechanisms. The system offers several advantages including proven accuracy in academic benchmarks such as TUM RGB-D and EuRoC datasets, support for multiple sensor modalities, and robust handling of dynamic environments.
 
-\section{Computer Vision and Human Detection}
-This section will cover the computer vision technologies employed for human detection and pose estimation in the Tino V2 system. The evolution of object detection algorithms will be traced, covering the progression from traditional computer vision techniques to modern deep learning approaches, the development of real-time detection frameworks like YOLO (You Only Look Once) that enable practical implementation on embedded hardware, and the specific advances in YOLOv11 that provide improved accuracy and efficiency for human detection tasks. Human pose estimation fundamentals will be established, covering the mathematical representation of human skeletal structure using key body joints, the challenges of 2D to 3D pose reconstruction from single camera views, and the integration of depth information to provide accurate 3D human tracking capabilities. The TensorRT optimization framework will be examined, covering the model conversion and optimization processes that enable real-time inference on NVIDIA hardware, the trade-offs between model complexity and inference speed that affect practical deployment, and the memory management strategies required for efficient operation on embedded systems with limited resources. Practical challenges in human detection will be addressed, covering the impact of varying lighting conditions and camera perspectives on detection accuracy, the handling of multiple people in the scene with potential occlusions, and the integration of detection results with robot control systems for responsive human-robot interaction.
+However, practical implementation reveals significant challenges including substantial computational requirements that typically necessitate GPU optimization for real-time performance~\cite{huang2018sensor}. The system can struggle in textureless environments or under poor lighting conditions where ORB feature extraction becomes unreliable. Compilation and integration challenges, particularly on ARM64 architectures, can also present development obstacles.
 
-\section{Virtual Reality Integration and Telepresence}
-This section will examine the technologies and methodologies for integrating VR systems with physical robotics platforms to enable immersive telepresence experiences. The VR development landscape will be surveyed, covering the Unity game engine as a platform for creating interactive VR applications, the hardware requirements and capabilities of modern VR headsets for spatial tracking and user interaction, and the software frameworks that enable communication between VR applications and external systems. The telepresence robotics concept will be established, covering the psychological and technical requirements for effective remote presence that makes users feel genuinely connected to distant environments, the importance of low-latency communication for natural interaction, and the challenges of mapping human movements and intentions to appropriate robot behaviors. The communication architecture will be detailed, covering the ROS-TCP-Endpoint framework that enables Unity-ROS2 integration, the message passing protocols required for real-time data exchange, and the synchronization challenges that arise when coordinating virtual and physical systems with different update rates and latency characteristics. The user experience design considerations will be addressed, covering the development of intuitive VR interfaces that enable effective robot control without requiring technical expertise, the importance of providing appropriate feedback to help users understand robot state and capabilities, and the safety considerations that must be incorporated when enabling remote control of physical robotic systems.
+Stereo visual odometry addresses the scale ambiguity problem by utilizing depth information from calibrated stereo camera pairs. These approaches provide accurate trajectory estimation through triangulation-based depth reconstruction, though they face significant challenges in textureless environments or under poor lighting conditions where feature matching becomes unreliable~\cite{geiger2011stereoscan}.
+
+\subsection{Direct and Semi-Direct SLAM Systems}
+Semi-direct Visual Odometry (SVO)~\cite{forster2014svo} offers reduced computational requirements compared to feature-based SLAM systems by tracking pixels directly rather than extracting and matching discrete features. The system demonstrates particular compatibility with fisheye and catadioptric cameras, making it suitable for wide field-of-view applications.
+
+Direct Sparse Odometry (DSO)~\cite{engel2017direct} represents another approach in this category, utilizing direct photometric error minimization without feature extraction. While these systems offer computational advantages, they require well-textured environments for reliable tracking and can struggle in highly dynamic scenes. SVO presents compilation challenges on ARM64 architectures and lacks comprehensive map management capabilities.
+
+\subsection{Graph-Based SLAM Systems}
+RTABMap (Real-Time Appearance-Based Mapping)~\cite{labbe2019rtab} employs appearance-based mapping techniques combined with graph optimization to provide robust performance across various environmental conditions. The system offers comprehensive map management capabilities including reliable save and load functionality, multi-session mapping support, and effective relocalization performance.
+
+RTABMap demonstrates particular strength in practical deployment scenarios, offering stable map persistence and reliable relocalization capabilities essential for operational robot systems. The system provides excellent integration with standard robotics frameworks including ROS and ROS2, supporting various sensor configurations including RGB-D cameras and stereo systems.
+
+The integration of RGB-D sensors enables more reliable feature tracking and geometric reconstruction compared to traditional stereo approaches. However, these systems face limitations including reduced operating range (typically under 5 meters) and sensitivity to lighting conditions that affect depth sensor performance~\cite{henry2012rgb}. The primary advantages include robust map management, reliable relocalization, excellent framework integration, and proven performance in real-world deployments, making RTABMap particularly suitable for applications requiring consistent long-term operation and map reuse capabilities.
+
+\subsection{Ultra-Wideband Positioning Technology}
+Ultra-Wideband (UWB) technology has gained significant attention for indoor positioning applications due to its potential for centimeter-level accuracy~\cite{gezici2005localization}. The technology operates in the 3.1--10.6 GHz frequency range, providing high temporal resolution that enables precise time-of-flight distance measurements.
+
+UWB positioning systems require infrastructure deployment including multiple anchor points with known positions to enable triangulation-based localization. Research has demonstrated the technology's advantages including low power consumption, minimal interference with other wireless systems, and potential penetration through materials including fabrics~\cite{rpo2019uwb}.
+
+However, UWB systems face significant challenges in Non-Line-of-Sight (NLOS) conditions where multipath effects can degrade positioning accuracy~\cite{luo2020uwb}. The technology primarily provides position information and requires additional sensors for orientation estimation, typically through fusion with inertial measurement units.
+
+\subsection{LiDAR-Based SLAM}
+LiDAR systems provide high-resolution 3D environmental mapping through laser scanning, offering excellent spatial resolution and range performance~\cite{yan2019lidar}. These systems enable accurate simultaneous localization and mapping through point cloud analysis and clustering algorithms, providing robust environmental perception capabilities.
+
+LiDAR-based SLAM offers several advantages including operation in various lighting conditions, precise distance measurements, and detailed environmental reconstruction. The technology is particularly effective for large-scale outdoor environments and can provide reliable localization even in feature-poor environments where visual SLAM systems might struggle.
+
+However, LiDAR systems present several challenges for social robotics applications. The mechanical scanning components can be sensitive to vibration, making them unsuitable for robots with soft or flexible structures. The cost and size of LiDAR systems can also be prohibitive for many social robot applications. Additionally, the range and resolution capabilities of LiDAR systems may represent overkill for typical indoor social interaction scenarios.
+
+\subsection{Sensor Fusion Approaches}
+Modern localization systems increasingly rely on sensor fusion techniques to combine information from multiple sensing modalities. Extended Kalman Filter (EKF) and particle filter approaches enable fusion of visual odometry, IMU data, and wheel encoder information to achieve robust localization performance~\cite{huang2018sensor}.
+
+Inertial Measurement Units (IMUs) combined with wheel encoders represent a low-cost localization approach suitable for many mobile robot applications. While these systems offer advantages including low cost and independence from environmental conditions, they suffer from drift accumulation over time due to integration of noisy sensor measurements~\cite{borenstein1996measurement}.
+
+Performance can be particularly poor on uneven surfaces where wheel slip affects encoder accuracy, or in applications involving impulse-based movement patterns that can saturate IMU sensors. The drift characteristics make these approaches unsuitable as standalone solutions for long-term autonomous operation.
+
+\section{Human Detection and Pose Estimation Technologies}
+Human detection and tracking capabilities are essential for social robots that must operate safely and effectively in human-populated environments. This section examines various sensing modalities and computational approaches for human perception in robotics applications.
+
+\subsection{Computer Vision-Based Human Detection}
+\subsubsection{RGB-D Sensing Systems}
+RGB-D cameras provide simultaneous color and depth information, enabling robust human detection and pose estimation. Intel RealSense cameras and similar structured light devices offer synchronized data streams that support skeleton tracking through established frameworks.
+
+OpenPose~\cite{cao2019openpose} represents a breakthrough in real-time multi-person pose estimation, utilizing Part Affinity Fields (PAFs) to associate body parts with individuals in crowded scenes. The system provides detailed information about human posture and gesture, enabling rich interaction capabilities for social robotics applications.
+
+MediaPipe~\cite{lugaresi2019mediapipe} offers an alternative framework optimized for mobile and embedded platforms, providing real-time pose estimation with reduced computational requirements. These systems demonstrate comprehensive human pose information extraction with reasonable computational demands.
+
+Integration challenges arise when cameras must be concealed within robot structures, particularly for robots with soft exteriors where camera visibility may be constrained.
+
+\subsubsection{Machine Learning-Enhanced Detection}
+Modern deep learning approaches have revolutionized human detection capabilities. YOLO (You Only Look Once) architectures, particularly YOLOv8~\cite{redmon2016you} and recent variants including YOLOv11, provide real-time human detection and pose estimation capabilities with single-stage detection frameworks.
+
+These systems offer several advantages including lower hardware costs, reduced physical profile compared to RGB-D cameras, and sophisticated pose estimation capabilities. Monocular depth estimation networks such as MiDaS~\cite{ranftl2020towards} can provide approximate depth information without requiring specialized depth sensors.
+
+The primary challenges include computational requirements for real-time processing on embedded platforms and dependency on lighting conditions. However, advances in embedded AI processing platforms, including NVIDIA Jetson series and specialized AI accelerators, are making these approaches increasingly viable for mobile robotics applications.
+
+\subsection{Alternative Sensing Modalities}
+\subsubsection{Thermal Imaging}
+Thermal cameras detect infrared radiation emitted by objects, making them particularly effective for human detection regardless of lighting conditions~\cite{thermal2019detection}. Thermal imaging offers potential advantages including operation in complete darkness and possible penetration through certain materials including fabrics.
+
+The primary benefit for social robotics applications is the ability to detect human presence even when optical cameras may be obscured. However, thermal sensors provide limited contextual information beyond heat signatures, making it difficult to extract detailed pose information or distinguish between different individuals.
+
+\subsubsection{LiDAR-Based Detection}
+LiDAR systems provide high-resolution 3D environmental mapping through laser scanning, offering excellent spatial resolution and range performance~\cite{yan2019lidar}. These systems can accurately detect human presence and track movement through point cloud analysis and clustering algorithms.
+
+However, LiDAR systems present several challenges for social robotics applications. The mechanical scanning components can be sensitive to vibration, making them unsuitable for robots with soft or flexible structures. The cost and size of LiDAR systems can also be prohibitive for many social robot applications.
+
+\section{Social Robotics and Human-Robot Interaction Foundations}
+Social robotics has emerged as a distinct field focusing on robots designed to interact with humans in natural, socially meaningful ways~\cite{breazeal2003toward}. Understanding the theoretical foundations of human-robot interaction provides essential context for the technological requirements of social robots.
+
+\subsection{Non-Verbal Communication in Robotics}
+Research in human communication demonstrates that non-verbal cues carry significant emotional weight, often conveying information that verbal communication cannot express~\cite{mehrabian1971silent}. Ekman's seminal work on universal facial expressions shows that fundamental emotions are communicated across cultures through body language and facial expressions~\cite{ekman1971universals}.
+
+These insights have profound implications for social robotics design. Robots capable of expressing emotions through coordinated physical movements can potentially achieve meaningful communication without relying on anthropomorphic features or verbal interaction~\cite{breazeal2003toward}. This approach enables exploration of movement as a primary communicative tool, independent of human anatomical associations.
+
+\subsection{Telepresence and Mediated Interaction}
+Telepresence robotics research investigates how humans can effectively control remote robotic systems to achieve natural interaction with distant environments~\cite{sheridan1992musings}. The field has evolved from simple teleoperation to sophisticated systems that preserve social presence and emotional connection across physical distances.
+
+Recent advances in virtual reality technology have opened new possibilities for immersive robot control, where operators can experience robot embodiment through first-person perspectives. This approach enables investigation of how virtual reality interfaces can enhance rather than diminish the emotional and empathetic qualities of robot-mediated human interaction.
+
+\section{VR Integration in Robotics}
+Virtual Reality integration with robotics systems represents an emerging area of research with significant potential for advancing human-robot interaction capabilities. This section examines the current state of VR-robotics integration and its implications for social robotics applications.
+
+\subsection{Immersive Teleoperation Systems}
+Traditional robot teleoperation relies on external displays and control interfaces that create cognitive distance between the operator and the robot~\cite{sheridan1992musings}. Immersive VR interfaces offer the potential to bridge this gap by providing first-person robot perspectives and natural control paradigms.
+
+Research in VR teleoperation has demonstrated improved operator performance and reduced cognitive load when controlling robots through immersive interfaces. These systems enable operators to leverage natural spatial reasoning and motor skills for robot control, potentially improving the quality and naturalness of robot movements.
+
+\subsection{Challenges in VR-Robot Integration}
+Successful VR-robot integration faces several technical challenges including latency requirements, sensor data processing, and spatial correspondence between virtual and physical environments. Real-time performance requirements typically mandate processing latencies below 100 milliseconds to maintain immersive experiences and prevent motion sickness in VR applications.
+
+The integration requires sophisticated data processing pipelines to convert robot sensor data into meaningful VR representations while maintaining real-time performance constraints. Spatial registration between virtual environments and physical robot spaces presents additional challenges, particularly when virtual environments are custom-designed rather than directly mapped from physical spaces.
+
+\section{Legacy Tino System Analysis}
+Understanding the limitations and capabilities of the original Tino robot system provides essential context for the improvements implemented in Tino V2. This comprehensive analysis examines the legacy system architecture and identifies specific areas requiring enhancement.
+
+\subsection{Original System Architecture}
+The original Tino robot, developed as part of previous research in social robotics~\cite{cardillo2024thesis}, utilized a Raspberry Pi-based control architecture with inherent computational limitations. The system employed a Triskar omnidirectional base providing three-degree-of-freedom mobility through three independently controlled wheels arranged in a triangular configuration.
+
+While this omnidirectional configuration offered excellent theoretical maneuverability for social interaction scenarios, practical deployment revealed significant reliability issues under the robot's operational weight. Wheel degradation and mechanical wear patterns limited system reliability and required frequent maintenance interventions.
+
+The legacy sensor suite was extremely limited, consisting only of a basic Pi camera used exclusively for video streaming to remote operators. The system lacked any environmental sensors or perception capabilities, with the camera providing raw video feed without any on-board processing for computer vision, object detection, or environmental analysis.
+
+\subsection{Software Architecture Limitations}
+The original software architecture employed monolithic Python scripts with limited modularity and debugging capabilities. This approach made system maintenance and feature development challenging, particularly when attempting to integrate new sensing modalities or advanced control paradigms.
+
+Communication between system components was handled through simple serial interfaces without the robust messaging frameworks required for complex multi-sensor systems. The absence of standardized robotics frameworks made it difficult to leverage existing libraries and tools for advanced robotics capabilities.
+
+\subsection{VR Integration Requirements}
+The motivation for Tino V2 development arose primarily from requirements for VR integration that were not feasible within the original system constraints. VR teleoperation demands real-time processing of commands, sophisticated sensor fusion for accurate localization, and low-latency communication protocols.
+
+The legacy system lacked the computational capabilities required for real-time computer vision processing, advanced SLAM algorithms, or sophisticated human detection and pose estimation systems. These limitations prevented implementation of the data processing pipelines necessary for meaningful VR integration.
+
+Most critically, the original architecture could not support the real-time sensor fusion and environmental mapping capabilities required to provide accurate robot localization and human pose data to VR systems. Without these capabilities, meaningful VR-mediated social interaction remained impossible.
+
+\subsection{Identified Enhancement Requirements}
+Analysis of the legacy system revealed several critical enhancement requirements that motivated the comprehensive redesign undertaken in Tino V2:
+
+\begin{itemize}
+\item \textbf{Computational Platform Upgrade}: Migration from Raspberry Pi to more powerful embedded computing platforms capable of real-time AI processing and sophisticated sensor fusion.
+
+\item \textbf{Advanced Localization Systems}: Implementation of robust SLAM capabilities with map persistence and reliable relocalization for consistent spatial awareness.
+
+\item \textbf{Human Detection and Pose Estimation}: Integration of real-time computer vision systems capable of detecting and tracking human pose for VR representation.
+
+\item \textbf{Modular Software Architecture}: Development of ROS-based modular architecture enabling easier integration of new capabilities and robust debugging.
+
+\item \textbf{VR Communication Infrastructure}: Implementation of low-latency communication systems capable of real-time data exchange with VR environments.
+
+\item \textbf{Mechanical Reliability Improvements}: Redesign of the mobility platform to address reliability issues while maintaining expressive movement capabilities.
+\end{itemize}
+
+These requirements collectively defined the scope and objectives for the Tino V2 development project, establishing the foundation for the technological solutions presented in subsequent chapters.
+

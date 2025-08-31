@@ -232,19 +232,400 @@ Diagnostic capabilities include real-time logging of sensor fusion decisions, po
 
 
 \section{Kinematic Base Upgrade from Omnidirectional to Differential Drive}
-This section will detail the comprehensive redesign of Tino's mobility system, transitioning from the problematic omnidirectional Triksta base to a robust differential drive architecture. The limitations of the original omnidirectional system will be analyzed first, covering the mechanical failures experienced with the omniwheel rollers that became squared due to Tino's 20kg weight, the dragging issues with the rear wheel that occurred during forward and turning movements, and the unreliable motor performance under the sustained loads required for social robot operation. The differential drive design rationale will be explained, including the simplified kinematics that eliminate the complexity of omnidirectional control while maintaining adequate maneuverability for social interaction scenarios, the improved weight distribution that reduces stress on individual components, and the enhanced reliability achieved through proven mechanical design principles. The mechanical implementation will be detailed, covering the construction of the T-structure using aluminum Item profiles that provide a dynamic and adjustable framework, the motor mounting system modifications required to accommodate the new differential drive configuration, and the wheel positioning optimization that achieves proper balance and traction for the robot's operational requirements. The control system adaptation will be examined, including the implementation of custom PID (Proportional-Integral-Derivative) controllers specifically designed for differential drive kinematics, the motor driver upgrade to the more powerful MDD10A units that can handle increased loads, and the command interface modifications that maintain compatibility with existing movement control systems while improving performance and reliability.
+
+The kinematic base redesign represents a fundamental shift from the problematic omnidirectional Triksta system to a robust differential drive architecture that addresses the mechanical limitations identified during extended operational testing.
+
+\subsection{Original System Limitations and Failure Analysis}
+
+The original omnidirectional base system utilizing the Triksta platform exhibited systematic failures under the operational demands of the 20kg Tino robot. Comprehensive analysis revealed multiple failure modes that compromised system reliability and operational capability.
+
+\subsubsection{Omniwheel Mechanical Failures}
+
+The omniwheel rollers experienced systematic deformation under Tino's 20kg operational weight, with roller surfaces becoming squared due to continuous plastic deformation. This deformation created irregular rolling characteristics that manifested as vibration, reduced traction, and unpredictable movement behavior during social interaction scenarios.
+
+Roller bearing failures occurred frequently in the rear omniwheel due to the dragging forces encountered during forward movement and turning operations. The omnidirectional capability proved unnecessary for social robot applications, as Tino's interaction patterns primarily required forward movement with turning capabilities rather than true omnidirectional motion.
+
+Load distribution analysis revealed that the three-wheel configuration created uneven weight distribution with the rear wheel experiencing excessive drag forces. This asymmetric loading accelerated wear patterns and contributed to premature component failure, particularly during sustained operation periods required for social interaction research.
+
+\subsubsection{Motor Performance and Control Challenges}
+
+The original motor configuration struggled to provide consistent torque under the sustained loading conditions required for Tino's operation. Motor heating issues developed during extended use, leading to performance degradation and potential component damage that threatened operational reliability.
+
+Control system complexity increased significantly due to the omnidirectional kinematics, requiring sophisticated coordination between three drive motors while compensating for mechanical variability and wear. The VirHas library dependency created maintenance challenges and limited customization capabilities for the specific requirements of the Tino platform.
+
+\subsection{Differential Drive Architecture Design}
+
+The differential drive architecture selection prioritized mechanical simplicity, enhanced reliability, and improved maintainability while providing adequate maneuverability for social robot applications.
+
+\subsubsection{Kinematic Simplification and Performance Benefits}
+
+The differential drive design eliminates the mechanical complexity of omnidirectional systems while maintaining the essential mobility requirements for social interaction scenarios. The two-wheel configuration with rear caster provides stable platform dynamics with reduced component count and simplified maintenance requirements.
+
+Weight distribution optimization utilizes the two front drive wheels to support the majority of Tino's operational weight while the rear caster wheel provides stability without bearing significant driving loads. This configuration eliminates the dragging forces that compromised the original omnidirectional system.
+
+Maneuverability analysis demonstrates that differential drive provides adequate turning capability for social robot applications through differential wheel speed control. The simplified kinematics enable more precise movement control and improved repeatability compared to the three-wheel omnidirectional system.
+
+\subsection{Mechanical Implementation and Structural Modifications}
+
+The mechanical implementation required comprehensive base modification utilizing aluminum Item profiles to create a robust and adjustable platform architecture.
+
+\subsubsection{T-Structure Construction with Aluminum Profiles}
+
+The T-structure design utilizes aluminum Item profiles to create a dynamic and adjustable framework that enables optimal wheel positioning for weight distribution and traction optimization. The modular profile system provides structural rigidity while allowing mechanical adjustments without complete system redesign.
+
+Wheel spacing optimization through the adjustable T-structure enables fine-tuning of track width to achieve proper balance and stability characteristics. The aluminum construction provides excellent strength-to-weight ratio while maintaining the structural integrity required for Tino's operational loads.
+
+Motor mounting points integrate directly with the Item profile system through custom brackets that provide precise motor alignment and secure attachment. The modular design enables motor replacement or upgrade without structural modifications to the base platform.
+
+\subsubsection{Motor Upgrade and Drive System Enhancement}
+
+The motor upgrade to more powerful units addresses the thermal and torque limitations identified in the original system. The new motors provide enhanced heat dissipation capabilities and higher continuous torque ratings suitable for Tino's operational requirements.
+
+Motor driver upgrade to the MDD10A units provides increased current handling capability and enhanced control responsiveness compared to the original dual-driver configuration. The single-driver solution simplifies electrical connections while providing superior performance characteristics for differential drive control.
+
+\subsection{Wheel System Development and Traction Solutions}
+
+The wheel selection and mounting system required iterative development to address the unique challenges of supporting Tino's weight while maintaining reliable traction and durability.
+
+\subsubsection{Wheel Selection Evolution and Testing}
+
+Initial wheel selection utilized plastic wheels with pneumatic rubber tires that provided adequate traction but suffered from hub failure under operational loads. The plastic hub construction proved inadequate for the sustained loading conditions, requiring multiple repairs and replacements during system development.
+
+Tire debeading issues occurred when the rubber tire separated from the plastic hub due to inadequate bonding strength under operational stress. Multiple repair approaches were evaluated, including hot-glue reinforcement that provided temporary solutions but required periodic maintenance.
+
+Wheel hub reinforcement through hot-glue filling addressed the structural weakness in the plastic hub construction. This solution proved effective in preventing debeading while maintaining adequate traction characteristics, though it represents a temporary fix requiring future wheel system upgrade.
+
+\subsubsection{Fabric Protection and Bumper Implementation}
+
+Fabric interference prevention required the implementation of protective bumpers to prevent Tino's fabric covering from interfering with wheel operation. The bumper design provides physical separation between the moving wheels and the flexible fabric structure.
+
+Bumper effectiveness testing demonstrated successful prevention of fabric entanglement in most operational scenarios, though some edge cases still require operator attention. The bumper system represents a practical solution that addresses the majority of fabric interference issues without compromising Tino's aesthetic design.
+
+\subsection{Control System Adaptation for Differential Drive}
+
+The control system required comprehensive modification to support differential drive kinematics while maintaining compatibility with existing command interfaces.
+
+\subsubsection{Custom PID Controller Implementation}
+
+The PID controller development specifically targets differential drive characteristics, replacing the VirHas library dependency with custom control algorithms optimized for Tino's platform. The implementation utilizes classical PID control with Kp=7.3, Ki=5.6, and Kd=0.2 parameters tuned specifically for the MDD10A motor drivers and Tino's mechanical characteristics.
+
+Motor speed calculation employs encoder feedback with 1920 pulses per revolution (PPR) encoders to determine actual wheel velocities in rad/s. The \texttt{getMotorSpeed()} function calculates instantaneous speed based on encoder position changes over time intervals, enabling closed-loop speed control for precise movement execution.
+
+The \texttt{updatePid()} function implements the complete PID algorithm with integral term reset on setpoint changes to prevent windup, derivative calculation for damping, and output limiting to ±255 PWM range. This ensures stable motor control without oscillation while maintaining responsive movement characteristics.
+
+Atomic movement control integrates with the PID system through the \texttt{updateBaseMovementByTime()} function that manages four distinct movement states: resting (0), little push (1), timing preparation (2), and coordinated forward movement (3). Each state implements specific timing profiles and movement patterns that support synchronized leg-base coordination for VR integration.
+
+The movement state machine ensures atomic operation completion where each movement phase must finish before accepting new commands, preventing interrupted motions that could compromise synchronized robot behavior. State transitions include proper timing validation and pending command management for seamless VR user interaction.
 
 \section{Power Supply System Redesign for Orin Nano}
-This section will present the comprehensive power system redesign required to support the NVIDIA Orin Nano platform and associated high-performance components. The power requirements analysis will be detailed first, covering the Orin Nano's 19V DC input requirement and power consumption characteristics that reach up to 2A during maximum computational load, the additional power needs for the Oak-D Pro camera and onboard router systems, and the total system power budget that necessitated complete redesign of the legacy Raspberry Pi power architecture. The DC-DC converter implementation will be explained, including the selection and testing of the Oumefar 12V to 19V step-up converter that provides stable power delivery, the power efficiency analysis that demonstrates optimal battery utilization, and the thermal management considerations that ensure reliable operation under sustained loads. The battery system optimization will be examined, covering the consolidation from four separate battery systems to three integrated power sources, the 5200mAh 80C 11.1V 57.72Wh battery specification that provides approximately 1.37 hours of operation at maximum load, and the realistic operational time estimates of 2-3 hours under typical social interaction scenarios. The cable harness redesign will be detailed, including the removal of legacy USB-A and USB-C connections that were used for Raspberry Pi power delivery, the implementation of proper 12V input distribution and 19V DC jack connectivity, and the integration of the 12V to 5V converter that powers the onboard router and camera systems independently, providing flexibility for future system expansions and reducing the computational load on the main platform.
+
+The power system redesign addresses the comprehensive requirements of the NVIDIA Orin Nano platform and associated high-performance components, necessitating complete architecture overhaul from the legacy Raspberry Pi power distribution system.
+
+\subsection{Power Requirements Analysis and System Specifications}
+
+The NVIDIA Orin Nano platform introduces significantly different power requirements compared to the original Raspberry Pi system, requiring comprehensive power architecture redesign to support enhanced computational capabilities.
+
+\subsubsection{Orin Nano Power Consumption Characteristics}
+
+The Orin Nano requires 19V DC input with power consumption characteristics that reach up to 2A during maximum computational load scenarios including simultaneous SLAM processing, human detection, audio processing, and ROS2 node operation. Typical operational consumption ranges between 1.3A to 1.4A during standard social interaction scenarios.
+
+Power consumption analysis under various operational modes demonstrates peak consumption of 38W during maximum load conditions, with sustained operation typically requiring 25-27W. The power profile exhibits significant variation based on computational load, requiring robust power delivery capable of handling transient peaks without voltage drop.
+
+Computational load correlation shows direct relationship between power consumption and processing intensity, with SLAM operations, TensorRT inference, and audio processing contributing the highest power demands. The variable load characteristics necessitate stable power delivery across the full operational range.
+
+\subsubsection{Auxiliary System Power Requirements}
+
+The Oak-D Pro camera system requires 5V DC input with power consumption up to 5W during high-resolution stereo processing. The camera power can be supplied directly from the Orin Nano USB ports or through dedicated power distribution for enhanced flexibility and reduced main processor loading.
+
+The onboard router system requires 5V DC input for network connectivity and VR communication capabilities. Router power consumption remains relatively constant at approximately 3W during operational periods, providing stable power requirements for system design.
+
+Total system power budget analysis indicates maximum power consumption of approximately 46W under peak operational conditions, with typical sustained operation requiring 33-35W. The power analysis includes safety margins for component aging and environmental variations.
+
+\subsection{DC-DC Converter Implementation and Power Distribution}
+
+The power conversion system utilizes high-efficiency DC-DC converters to transform battery voltage to the multiple voltage levels required by system components.
+
+\subsubsection{Oumefar 12V to 19V Step-Up Converter Selection}
+
+The Oumefar DC-DC step-up converter provides stable 19V output from 12V battery input with efficiency ratings exceeding 85\% across the operational load range. Converter selection prioritized stability, efficiency, and thermal performance under the sustained loading conditions required for social robot operation.
+
+Power delivery stability testing demonstrated consistent voltage regulation within ±2\% across full load range with excellent transient response during computational load variations. Thermal performance analysis shows acceptable operating temperatures during sustained maximum load conditions without additional cooling requirements.
+
+Load regulation characteristics maintain stable 19V output from no-load to maximum current draw, ensuring consistent Orin Nano performance across all operational scenarios. The converter includes overcurrent protection and thermal shutdown features that protect against component failure during fault conditions.
+
+\subsubsection{Secondary Power Rail Implementation}
+
+The 12V to 5V conversion system provides power for auxiliary components including the Oak-D Pro camera and onboard router. The secondary converter selection prioritized efficiency and multiple output capability to support various system components.
+
+Power distribution architecture enables independent power control for auxiliary components, providing flexibility for future system expansion and reduced loading on the primary Orin Nano power rail. The distributed approach improves system reliability by isolating power domains.
+
+Circuit protection includes individual fusing for each power rail and overcurrent protection that prevents system damage during component failure scenarios. The protection scheme enables continued operation of unaffected systems during partial power system failures.
+
+\subsection{Battery System Optimization and Consolidation}
+
+The battery system redesign consolidates multiple power sources while providing enhanced capacity and reliability for extended operational periods.
+
+\subsubsection{Battery Specification and Performance Analysis}
+
+The primary battery system utilizes 5200mAh 80C 11.1V 57.72Wh LiPo batteries that provide the power density and discharge capabilities required for robotic applications. Battery specification analysis demonstrates adequate capacity for 2-3 hours of typical operation with conservative discharge management.
+
+Maximum load operational time calculations indicate approximately 1.37 hours of operation under peak power conditions, though realistic operational scenarios typically achieve 2+ hours due to variable computational loading.
+
+Discharge characteristics analysis demonstrates stable voltage delivery throughout the operational range with minimal voltage drop during high current transients. The high discharge rate capability (80C) ensures stable power delivery during computational peaks without voltage sag.
+
+\subsubsection{Power System Consolidation Strategy}
+
+The system consolidation reduces complexity from four separate battery systems to three integrated power sources, eliminating the dedicated router power bank and USB power bank previously required for Raspberry Pi operation. Consolidation simplifies system startup procedures and reduces component count.
+
+Battery management strategy includes individual monitoring and charging protocols for each power source while maintaining operational independence. The consolidated approach reduces overall system weight while providing enhanced operational capability through optimized power distribution.
+
+Operational startup sequence simplifies through power system consolidation, reducing from multiple power-on procedures to streamlined system activation. The simplified approach reduces operator complexity and potential startup errors during experimental scenarios.
+
+\subsection{Cable Harness Redesign and Integration}
+
+The cable harness redesign eliminates legacy connections while implementing proper power distribution for the enhanced system architecture.
+
+\subsubsection{Legacy Connection Removal and Modernization}
+
+The cable harness modification removes obsolete USB-A and USB-C connections that were utilized for Raspberry Pi power delivery, replacing them with proper 12V distribution and 19V DC jack connectivity optimized for Orin Nano requirements. Connector selection prioritizes reliability and ease of maintenance.
+
+Cable routing optimization reduces electromagnetic interference and mechanical stress while providing secure connections throughout the system. Harness design includes service loops and strain relief that accommodate system maintenance without cable damage.
+
+Connector standardization utilizes consistent connector types throughout the system to simplify maintenance and reduce spare parts requirements. Standardization also reduces connection errors during system assembly and troubleshooting procedures.
+
+\subsubsection{Power Distribution Architecture}
+
+The 12V input distribution system provides primary power for both the step-up converter and the secondary 5V converter, enabling efficient power utilization from the primary battery source. Distribution includes proper circuit protection and monitoring capabilities.
+
+The 19V DC jack implementation provides secure power connection to the Orin Nano with proper mechanical support and electrical contact reliability. Jack selection includes locking mechanisms that prevent accidental disconnection during operation.
+
+Future expansion capabilities include additional power distribution points for system upgrades and experimental equipment integration. The modular power architecture supports system enhancement without complete harness redesign.
 
 \section{Stewart Platform Head Mechanism Improvements}
-This section will document the iterative design improvements made to Tino's Stewart platform head mechanism to address reliability issues and enhance performance under operational loads. The original system limitations will be analyzed first, covering the servo axis misalignment problems that created excessive stress on servo motors during head movements, the structural flex issues in the connecting arms that caused mechanical instability and reduced precision, and the repeated arm failures that occurred due to inadequate load distribution and material selection. The first design iteration will be detailed, including the servo axis alignment improvement that redirected forces through the head structure rather than the servo mechanisms, the 3D printed PLA arm replacement with enhanced geometry for improved load distribution, and the initial performance evaluation that showed reduced servo stress but continued structural flex issues. The final design implementation will be examined, covering the adoption of rod end (heim joints) on both ends of each Stewart platform arm to eliminate binding and allow free rotation, the combination of 3D printed components with metal heim joints that provides optimal balance between cost and performance, and the mechanical trade-offs including acceptable head wobble during stationary periods that may actually enhance the robot's expressive capabilities. The performance validation will be discussed, including load testing that demonstrates improved reliability under operational conditions, the movement precision evaluation that shows maintained accuracy despite the mechanical improvements, and the longevity testing that validates the enhanced design's suitability for extended social interaction scenarios.
+
+The Stewart platform head mechanism underwent iterative design improvements to address systematic reliability issues and enhance performance under the operational loads encountered during social robot interaction scenarios.
+
+\subsection{Original System Analysis and Failure Modes}
+
+The original Stewart platform implementation exhibited multiple failure modes that compromised head movement precision and system reliability during extended operational periods.
+
+\subsubsection{Servo Axis Misalignment Problems}
+
+The original design suffered from servo axis misalignment that created excessive stress concentrations on servo motor internals during head movement operations. Force analysis revealed that head loads were transmitted directly through servo shafts rather than through the structural framework, creating potential failure-prone stress concentrations.
+
+The misalignment created moment arms that amplified forces applied to servo components, requiring design revision to prevent potential servo damage. The servo axis alignment improvement was implemented as a preventive measure to ensure reliable long-term operation.
+
+Mechanical analysis demonstrated that proper force transmission should flow through the head structure rather than servo mechanisms, necessitating fundamental design revision to achieve reliable operation under Tino's operational requirements.
+
+\subsubsection{Structural Flexibility and Arm Failures}
+
+The connecting arms exhibited excessive structural flexibility that reduced head positioning precision and contributed to mechanical instability during movement sequences. Flex analysis revealed inadequate stiffness-to-weight ratio in the original arm design, creating unwanted compliance in the kinematic chain.
+
+Repeated arm failures occurred due to inadequate load distribution and material selection that could not withstand the combination of static head weight and dynamic movement forces. Failure analysis identified stress concentration points where 3D printed components experienced crack initiation and propagation.
+
+Material selection limitations in PLA printing created brittleness under repeated loading cycles, with failure modes including layer delamination and stress cracking at critical load transfer points. The original material selection proved inadequate for the sustained loading requirements of social robot head movement.
+
+\subsection{First Design Iteration: Servo Axis Alignment}
+
+The first improvement iteration focused on servo axis alignment to redirect forces through proper load paths while maintaining the existing bearing-based connection system.
+
+\subsubsection{Force Path Optimization}
+
+The servo axis alignment improvement redirected head loads through the structural framework rather than servo mechanisms, reducing stress concentrations in servo internal components. Force analysis demonstrated significant reduction in lateral servo loading through proper geometric alignment.
+
+Structural load distribution optimization utilized improved geometry to distribute head weight and movement forces across the Stewart platform structure. Load path analysis verified proper force transmission through structural components rather than servo mechanisms.
+
+Performance evaluation demonstrated reduced servo stress indicators and improved movement precision, though structural flexibility issues remained due to the retained bearing connection system on the servo side of each arm.
+
+\subsubsection{ 3D Printed Component Enhancement}
+
+Enhanced PLA arm geometry provided improved load distribution through optimized cross-sectional design and stress concentration reduction. Geometric optimization utilized finite element analysis principles to identify optimal material distribution within manufacturing constraints.
+
+Print orientation optimization aligned layer structure with primary stress directions to maximize strength characteristics within PLA material limitations. Layer orientation analysis demonstrated significant strength improvement through proper print setup procedures.
+
+Initial performance testing showed improved reliability and reduced failure frequency, though continued structural flexibility limited overall system performance improvement. The partial solution validated the design approach while highlighting remaining system limitations.
+
+\subsection{Final Design Implementation: Rod End Integration}
+
+The final design iteration addressed remaining flexibility issues through the adoption of rod end (heim joint) connections on both ends of each Stewart platform arm.
+
+\subsubsection{Rod End Selection and Implementation}
+
+Research into Stewart platform best practices identified rod end connections as the standard solution for eliminating binding while allowing proper articulation throughout the movement range. Rod end selection prioritized load capacity, articulation range, and integration with existing servo and head mounting points.
+
+The rod end implementation utilizes metal heim joints that provide superior strength and durability compared to the original bearing system that used metal bearings encased within 3D printed components. Metal construction eliminates the brittleness and wear issues encountered with the printed bearing housings.
+
+Joint articulation characteristics enable free rotation in all necessary axes while providing positive mechanical connection between arm segments. The rod end design eliminates binding forces that contributed to servo stress and movement precision issues.
+
+\subsubsection{Mechanical Trade-offs and Performance Characteristics}
+
+The rod end implementation introduces acceptable head wobble during stationary periods due to the free articulation provided by the heim joints. Analysis indicates this wobble may actually enhance Tino's expressive capabilities by providing natural movement characteristics.
+
+Structural strength analysis demonstrates significant improvement in mechanical robustness and load-bearing capability while accepting reduced precision during stationary periods due to joint flexibility. The trade-off provides enhanced durability and operational reliability for social robot applications.
+
+Load capacity testing validates the enhanced design's capability to handle operational loads without component failure or excessive wear. Longevity testing demonstrates sustained performance under extended operational scenarios typical of social robot research applications.
+
+\subsection{Hybrid Construction Approach}
+
+The final implementation combines 3D printed structural components with metal heim joints to achieve optimal balance between cost, performance, and maintainability.
+
+\subsubsection{Material Selection and Integration}
+
+The hybrid approach utilizes 3D printed PLA components for structural framework elements where weight and cost optimization provide system benefits. Metal heim joints provide superior performance at critical articulation points where durability and precision requirements exceed plastic capabilities.
+
+Integration methodology ensures proper mechanical connection between printed and metal components through threaded interfaces and proper mechanical attachment techniques. Interface design accommodates thermal expansion differences and provides secure long-term connection.
+
+Cost optimization through selective material usage maintains reasonable component costs while providing enhanced performance where critical to system operation. The approach enables high-performance characteristics without excessive cost impact on the overall system.
 
 \section{Camera Integration and Mounting Solutions}
-This section will detail the comprehensive camera integration system developed to address the unique challenges of mounting sophisticated sensing equipment within Tino's soft fabric structure. The mounting system design will be explained first, covering the tripod-based camera support system that provides stable mounting for the Oak-D Pro camera, the bracket design that ensures proper camera alignment and minimizes vibration during robot movement, and the integration with the existing Stewart platform head that allows synchronized camera and head movements. The fabric integration challenges will be analyzed, including the camera visibility requirements that necessitate fabric modification without compromising Tino's aesthetic appeal, the heat dissipation needs of the Oak-D Pro camera that require ventilation considerations, and the protection requirements that shield sensitive camera components from physical damage during social interactions. The camera shell development will be detailed, covering the custom enclosure design that provides protection while maintaining cooling airflow, the velcro attachment system that secures fabric positioning without interfering with camera operation, and the mesh covering implementation that conceals the camera from casual observation while maintaining full operational capability. The field of view optimization will be examined, including the fabric positioning strategies that prevent interference with camera sensing, the testing procedures that validate optimal camera performance under various fabric configurations, and the reliability evaluation that ensures consistent operation throughout extended social interaction sessions.
+
+The camera integration system addresses the unique challenges of mounting sophisticated sensing equipment within Tino's soft fabric structure while maintaining the robot's aesthetic appeal and operational capabilities.
+
+\subsection{Mounting System Design and Mechanical Integration}
+
+The camera mounting system provides stable support for the Oak-D Pro camera while integrating with Tino's existing Stewart platform head mechanism and fabric covering system.
+
+\subsubsection{Tripod-Based Support System Development}
+
+The tripod mounting system utilizes simple brackets to create a fixed and stable camera support that eliminates the flexibility and vibration issues encountered with the original Raspberry Pi camera mount. Bracket design prioritizes rigidity while maintaining compatibility with the existing servo head structure.
+
+Mechanical stability analysis demonstrates significant improvement in camera positioning stability compared to the flexible original mount that exhibited excessive movement during robot operation. Static deflection testing validates adequate stiffness for high-quality image acquisition during movement.
+
+The camera mounting system operates independently from the Stewart platform head mechanism, providing dedicated stable positioning for the Oak-D Pro camera without mechanical coupling to head movements. This independent mounting ensures camera stability regardless of head articulation.
+
+\subsubsection{Structural Compatibility and Integration Challenges}
+
+The mounting system accommodates the existing servo head geometry while providing secure attachment points for the Oak-D Pro camera. Geometric constraints required custom bracket design that works within the available space while providing adequate support.
+
+Weight distribution analysis ensures that camera addition does not compromise Stewart platform performance or exceed servo motor capabilities. Camera weight integration maintains head balance characteristics while providing enhanced sensing capabilities.
+
+Mechanical interfaces utilize standard mounting hardware that enables camera removal for maintenance or upgrade without requiring bracket system modification. Modular approach provides flexibility for future system enhancement while maintaining operational reliability.
+
+\subsection{Fabric Integration and Visibility Solutions}
+
+The fabric integration system addresses the fundamental challenge of maintaining camera visibility while preserving Tino's fabric aesthetic and protecting sensitive camera components.
+
+\subsubsection{Fabric Modification and Positioning Strategies}
+
+Fabric positioning strategies prevent interference with camera sensing while maintaining the robot's aesthetic integrity. Positioning solutions accommodate fabric movement during robot operation without compromising camera field of view or image quality.
+
+Velcro attachment systems provide secure fabric positioning that prevents fabric drift into camera field of view during operational periods. Attachment point selection utilizes strategic locations that maintain fabric appearance while providing reliable position control.
+
+Testing procedures validate fabric positioning effectiveness under various operational scenarios including head movement, robot locomotion, and extended operational periods. Validation testing ensures consistent camera performance throughout typical social interaction scenarios.
+
+\subsubsection{Camera Protection and Environmental Considerations}
+
+Protection requirements address both physical protection from impact during social interaction and environmental protection from dust and moisture that could compromise camera operation. Protection solutions maintain camera accessibility for maintenance while providing adequate operational protection.
+
+The protective approach balances camera protection needs against heat dissipation requirements and optical performance considerations. Protection system design ensures adequate camera cooling while preventing environmental contamination that could affect image quality.
+
+Integration testing validates protection effectiveness while confirming maintained camera performance under operational conditions. Testing includes thermal performance evaluation and optical quality assessment under various environmental conditions.
+
+\subsection{Camera Shell Development and Implementation}
+
+The camera shell system provides comprehensive protection and fabric integration while maintaining optimal camera performance and heat dissipation characteristics.
+
+\subsubsection{Custom Enclosure Design and Functionality}
+
+The custom shell design provides camera protection while maintaining cooling airflow through strategic ventilation openings that enable heat dissipation without compromising environmental protection. Shell geometry optimizes airflow characteristics while minimizing dust ingress.
+
+Attachment integration with the tripod mounting system provides secure shell mounting that enables camera access for maintenance while providing operational protection. Mounting system design enables shell removal without disturbing camera alignment or calibration.
+
+Thermal management considerations ensure adequate heat dissipation during extended operation periods, particularly during high-resolution stereo processing that generates significant thermal loads. Thermal testing validates adequate cooling under maximum operational loads.
+
+\subsubsection{Velcro Fabric Control System}
+
+The fabric control system utilizes velcro attachments integrated with shell flaps to provide positive fabric positioning control. Flap design provides secure attachment points while maintaining fabric flexibility during robot movement.
+
+Velcro implementation includes both shell-mounted components and fabric-sewn counterparts that provide reliable attachment while enabling fabric removal for maintenance. Attachment strength optimization provides secure positioning without excessive fabric stress.
+
+Field testing validates velcro system effectiveness during extended operational periods including various robot movements and interaction scenarios. Testing confirms reliable fabric positioning without attachment failure or fabric damage.
+
+\subsection{Optical Performance Optimization}
+
+The camera integration system maintains optimal optical performance while addressing the unique challenges of fabric-integrated sensing systems.
+
+\subsubsection{Field of View Protection and Optimization}
+
+Field of view protection strategies ensure consistent camera visibility throughout robot operational ranges while accommodating fabric movement and positioning variations. Protection effectiveness validation includes testing under various lighting conditions and robot orientations.
+
+Mesh covering implementation conceals camera presence from casual observation while maintaining full optical transmission characteristics. Mesh selection balances concealment effectiveness against optical performance impact, ensuring minimal image quality degradation.
+
+Optical testing validates maintained image quality and depth sensing performance through the concealment system. Testing includes calibration verification and performance comparison against uncovered camera operation to ensure minimal performance impact.
+
+\subsubsection{Heat Management and Sustained Operation}
+
+Heat dissipation optimization addresses the Oak-D Pro camera's thermal requirements during sustained operation, particularly during high computational load scenarios including simultaneous SLAM processing and human detection.
+
+Cooling system design utilizes strategic airflow management that enables heat dissipation while maintaining environmental protection. Thermal testing validates sustained operation capability under maximum computational loads without thermal throttling.
 
 \section{Audio System Integration}
-This section will present the comprehensive audio system implementation that enables bidirectional communication capabilities for VR integration and enhanced human-robot interaction. The hardware component selection will be detailed first, covering the iTalk-01 omnidirectional microphone specification and mounting considerations within the fabric head structure, the speaker system selection and placement optimization that provides clear audio output without interfering with other robot systems, and the audio processing requirements that enable real-time communication with VR systems. The integration challenges will be analyzed, including the acoustic isolation needed to prevent feedback between microphone and speakers, the cable routing through the robot's structure that maintains mechanical flexibility while ensuring reliable connections, and the power management considerations that integrate audio components with the overall system power budget. The software implementation will be examined, covering the audio\_node.py and audio\_loopback.py ROS2 nodes that handle audio capture and playbook, the bidirectional communication protocols that enable seamless VR audio integration, and the audio processing algorithms that ensure high-quality sound transmission and reception. The performance validation will be discussed, including audio quality testing that demonstrates suitable performance for human-robot communication, latency measurements that verify real-time communication capabilities, and integration testing that validates seamless operation with the VR system and overall robot behavior control.
+
+The audio system integration enables comprehensive bidirectional communication capabilities for VR integration and enhanced human-robot interaction through carefully designed hardware implementation and dynamic audio processing.
+
+\subsection{Hardware Component Selection and Specifications}
+
+The audio hardware selection prioritizes high-quality bidirectional communication capability while maintaining integration compatibility with Tino's existing system architecture and space constraints.
+
+\subsubsection{iTalk-01 Omnidirectional Microphone Integration}
+
+The iTalk-01 omnidirectional microphone provides 360-degree audio capture capability suitable for social robot interaction scenarios where human positioning relative to the robot varies continuously. Microphone specification analysis demonstrates adequate sensitivity and frequency response for speech capture and environmental audio monitoring.
+
+Mounting considerations address the unique challenges of integrating audio capture equipment within Tino's fabric head structure while maintaining acoustic performance and physical protection. Microphone positioning optimization balances audio quality against mechanical protection and aesthetic integration requirements.
+
+Fabric integration methodology enables microphone mounting through strategic fabric modifications that provide audio access without compromising Tino's visual appearance. Integration techniques utilize fabric properties to provide acoustic coupling while maintaining environmental protection for sensitive electronic components.
+
+\subsubsection{Speaker System Selection and Placement}
+
+The speaker system selection prioritizes clear audio reproduction capability within the geometric and weight constraints of Tino's head assembly. Speaker placement within the servo head maximizes available space utilization while providing optimal acoustic coupling for human interaction scenarios.
+
+Acoustic performance optimization addresses the challenges of speaker operation within a constrained and partially enclosed environment. Speaker mounting utilizes available space within the servo head structure while ensuring adequate acoustic coupling and preventing mechanical interference with head movement systems.
+
+Integration with existing head systems ensures speaker mounting does not interfere with Stewart platform operation, camera mounting, or other head-mounted systems. Geometric optimization provides secure speaker mounting while maintaining system accessibility for maintenance and adjustment.
+
+\subsection{Dynamic Audio Generation and Custom Sound Design}
+
+The audio system implements sophisticated sound generation capabilities that create custom ambient audio specifically designed for Tino's character expression and VR integration requirements.
+
+\subsubsection{No-Face Inspired Audio Algorithm}
+
+The dynamic audio generation utilizes a complex algorithm inspired by the No-Face character from Studio Ghibli films, creating an eerie and mysterious ambient sound that enhances Tino's social presence. The \texttt{noface\_params} system maintains breathing phase control, breath cycle management, and dynamic volume adjustment to create organic, living audio characteristics.
+
+The breathing simulation algorithm implements a state machine with inhale and exhale phases, utilizing sinusoidal wave patterns with randomized duration (2.5-4.0 seconds) and volume variations (0.55-0.75 amplitude range) to create natural breathing rhythm variations. The system maintains continuous audio output while avoiding mechanical repetition through breath parameter randomization.
+
+Multi-tone synthesis combines three base frequencies (110Hz, 146.83Hz, 73.42Hz) with pre-calculated gain values (0.65, 0.45, 0.25) to create rich harmonic content. Filtered breath noise generation utilizes a first-order low-pass filter (coefficient 0.92) applied to random noise, creating organic texture that varies with breathing intensity.
+
+The audio generation operates at 44.1kHz sample rate with 1024-sample chunks, ensuring high-quality audio output while maintaining real-time performance compatibility with other system components including SLAM processing and human detection.
+
+\subsubsection{Real-Time Audio Parameter Control}
+
+The audio control system receives real-time parameters from the VR interface through ROS2 topics, enabling dynamic audio modification based on user interaction and robot state. The \texttt{vr\_audio\_callback} function processes \texttt{Float32MultiArray} messages containing volume (0-255 range) and orientation (-1.0 to 1.0 range) control values.
+
+Volume control implementation applies logarithmic scaling to provide natural perceived loudness variations while maintaining system audio output limits. The volume parameter directly scales the final audio amplitude, enabling seamless integration with VR-controlled audio levels based on proximity and interaction intensity.
+
+Orientation-based parameter modulation enables frequency shifting and audio characteristic changes based on spatial positioning. The orientation parameter influences base frequency modulation (±20\% frequency variation) and breathing pattern intensity, creating spatial audio awareness that enhances immersive VR interaction.
+
+\subsection{Stereo Speaker Configuration and Spatial Audio Processing}
+
+The stereo speaker system provides sophisticated spatial audio capabilities through advanced panning algorithms and stereo field manipulation optimized for social robot interaction scenarios.
+
+\subsubsection{Enhanced Stereo Panning Implementation}
+
+The stereo panning system implements aggressive channel separation techniques that create dramatic spatial audio effects controlled by VR input orientation values. The panning algorithm utilizes non-linear curves with exponential falloff characteristics to provide pronounced left-right audio separation that enhances directional audio expression.
+
+Channel separation calculations apply quadratic intensity scaling where \texttt{pan\_intensity = min(1.0, abs(orientation) * 1.5)} creates exponential panning response curves. Right-side dominance utilizes \texttt{left\_vol = volume\_scale * (1.0 - (orientation\_effect * 1.1 + pan\_intensity\^2 * 0.5))} while left-side dominance applies equivalent mirrored calculations for balanced spatial control.
+
+Channel boost implementation provides 30\% amplitude enhancement on the dominant channel (\texttt{right\_vol = volume\_scale * (1.0 + orientation\_effect * 0.3)}) while applying aggressive attenuation up to 95\% on the opposite channel. This creates pronounced stereo separation that maintains 5\% minimum volume to prevent complete channel silence.
+
+The panning system maintains real-time responsiveness with orientation updates processed at audio sample rate, enabling smooth spatial transitions that follow VR user head movements without audible artifacts or discontinuities.
+
+\subsubsection{Audio Expression and Robot Personality Integration}
+
+The stereo audio system enhances Tino's expressive capabilities by correlating spatial audio characteristics with robot emotional states and interaction contexts. Spatial audio positioning creates directional personality expression where left-right audio bias suggests attention direction and emotional focus.
+
+Breathing pattern modulation integrates with stereo positioning to create complex audio landscapes where breath intensity, frequency content, and spatial positioning combine to express robot internal states. The system maintains acoustic coherence while providing rich expressive variation through multi-dimensional audio parameter control.
+
+VR integration enables precise control over robot audio personality through real-time parameter adjustment, allowing users to influence robot audio expression through spatial positioning, proximity, and interaction intensity. This creates responsive audio feedback that enhances social presence and interaction naturalness.
 
 \section{YOLOv11 Pose Detection Implementation with TensorRT Optimization}
 This section will detail the implementation of YOLOv11 pose detection system optimized for real-time performance on the NVIDIA Orin Nano platform using pre-trained models. The YOLOv11 architecture selection will be explained first, covering the advantages of using the latest YOLO iteration for pose estimation tasks, including improved accuracy in detecting multiple humans simultaneously and optimized network architecture that balances detection accuracy with computational efficiency for embedded platforms. The pre-trained model utilization will be detailed, including the selection of the yolo11n-pose.pt model that provides an optimal balance between accuracy and computational requirements, the model format conversion from PyTorch (.pt) to ONNX (.onnx) format for cross-platform compatibility, and the final optimization to TensorRT engine (.engine) format that maximizes inference performance on the Orin Nano's GPU. The TensorRT optimization process will be examined, covering the engine generation procedures that optimize the neural network for the specific hardware platform and the memory allocation strategies that ensure efficient GPU utilization during real-time operation. The implementation architecture will be discussed, including the ROS2 node design that subscribes to camera topics from the Oak-D Pro and publishes human detection results, and the message publishing system that provides skeleton joint information with confidence scores for other system components.

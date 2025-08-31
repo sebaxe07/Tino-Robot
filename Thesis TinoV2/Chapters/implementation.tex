@@ -100,20 +100,135 @@ Launch file configuration provides flexible system deployment with separate conf
 
 The standardized interfaces support integration with external analysis tools and research systems. Data recording nodes can subscribe to any combination of system topics for comprehensive interaction analysis, while external control systems can inject commands through standard ROS2 interfaces. The architecture supports distributed deployment across multiple computing platforms and future integration with cloud-based services.
 
-\section{RTABMap Integration with Oak-D Pro Camera}
-This section will detail the comprehensive implementation of RTABMap (Real-Time Appearance-Based Mapping) SLAM system with the Oak-D Pro camera, establishing the foundation for Tino V2's localization capabilities. The Oak-D Pro camera integration will be explained first, covering the DepthAI library implementation that provides seamless access to stereo depth data, the ROS2 wrapper configuration that publishes synchronized color and depth image streams, and the camera calibration procedures that ensure accurate depth estimation and feature detection. The RTABMap configuration process will be detailed, including the parameter optimization for indoor environments, memory management settings that enable long-term operation without performance degradation, and the feature detection and matching algorithms that provide robust visual odometry in dynamic social interaction scenarios. The stereo vision implementation will be examined, covering how the Oak-D Pro's dual camera system provides depth information for feature triangulation, the baseline calibration that ensures accurate 3D point cloud generation, and the integration with RTABMap's visual-inertial odometry algorithms. The real-time performance optimization will be discussed, including the computational load balancing between feature extraction and map building processes, the memory allocation strategies that prevent system crashes during extended mapping sessions, and the parameter tuning that achieves optimal performance on the Orin Nano platform.
+\section{SLAM and Sensor Fusion Implementation}
 
-\section{SLAM Mapping and Localization Modes}
-This section will explain the dual operational modes implemented in the Tino V2 system, enabling both map creation and autonomous navigation capabilities. The mapping mode implementation will be detailed first, covering the launch file configuration (rtab\_mapping.launch.py) that initializes all necessary nodes for map creation, the real-time visualization capabilities that allow monitoring of map building progress, and the landmark placement strategies that improve map quality and relocalization reliability. The map building process will be examined, including the loop closure detection mechanisms that ensure map consistency, the keyframe selection algorithms that optimize memory usage while maintaining map quality, and the feature database management that enables efficient storage and retrieval of visual landmarks. The localization mode implementation will be explained, covering the launch file configuration (rtab\_localization.launch.py) that loads existing maps and initializes positioning systems, the relocalization algorithms that enable the robot to determine its position within a previously created map, and the continuous tracking mechanisms that maintain accurate positioning during navigation. The mode switching procedures will be detailed, including the map saving and loading protocols that ensure data persistence, the system state management that enables seamless transitions between mapping and localization modes, and the parameter configuration changes required for optimal performance in each operational mode.
+The localization system represents one of the most critical upgrades in Tino V2, implementing a sophisticated hybrid approach that combines visual SLAM capabilities with absolute positioning to achieve robust, accurate localization in dynamic social environments. The implementation addresses the fundamental limitations of pure visual odometry while leveraging the strengths of both RTABMap visual SLAM and Ultra-Wideband positioning technologies.
 
-\section{Initial SLAM-Only System Limitations and Drift Issues}
-This section will present a comprehensive analysis of the limitations discovered during initial testing of the SLAM-only localization approach, providing the technical justification for implementing the hybrid sensor fusion system. The drift accumulation problems will be documented first, including specific measurement data showing position errors of up to 1.2 meters during extended operation, the systematic analysis of error sources including visual odometry drift and map inconsistencies, and the environmental factors that contribute to localization degradation such as lighting changes and repetitive textures. The relocalization challenges will be examined, covering scenarios where RTABMap failed to correctly determine robot position within existing maps, the feature-poor environments that caused tracking failures, and the manual intervention requirements (robot rotation) needed to achieve successful relocalization. The performance testing methodology will be detailed, including the four-position testing protocol implemented to quantify localization accuracy, the repeated measurement procedures that revealed consistency issues, and the statistical analysis of position errors that demonstrated the need for absolute positioning reference. The specific failure modes will be analyzed, covering map corruption events that required complete map reconstruction, tracking loss scenarios that occurred near walls or in areas with insufficient visual features, and the computational resource limitations that affected real-time performance during intensive mapping operations.
+\subsection{RTABMap Integration with Oak-D Pro Camera}
 
-\section{UWB Positioning System Implementation}
-This section will detail the Ultra-Wideband (UWB) positioning system integration that provides absolute positioning reference to complement the visual SLAM system. The UWB hardware implementation will be explained first, covering the anchor placement strategy that ensures optimal coverage of the operating environment, the calibration procedures that establish accurate position references, and the tag integration with the Tino robot platform that minimizes interference with other systems. The positioning algorithm implementation will be detailed, including the multilateration techniques that calculate 3D position from multiple anchor measurements, the Non-Line-of-Sight (NLOS) mitigation strategies that improve accuracy in complex indoor environments, and the filtering algorithms that reduce measurement noise and provide stable position estimates. The coordinate system alignment will be examined, covering the transformation procedures that align UWB coordinates with the SLAM coordinate frame, the map offset implementation that enables rotational correction of SLAM maps, and the calibration protocols that ensure consistent positioning across different operational sessions. The real-time performance characteristics will be analyzed, including the update rates achieved by the UWB system, the latency measurements that demonstrate suitability for real-time control applications, and the accuracy evaluation that shows centimeter-level positioning precision under optimal conditions.
+The RTABMap implementation utilizes the Oak-D Pro stereo camera system to provide visual-inertial odometry and mapping capabilities. The integration leverages the DepthAI ecosystem through the \texttt{depthai\_examples} package, which provides optimized camera drivers and ROS2 integration for the OAK platform.
 
-\section{Sensor Fusion Between RTABMap Orientation and UWB Positioning}
-This section will present the sophisticated sensor fusion approach that combines the complementary strengths of visual SLAM and UWB positioning to achieve superior localization performance. The fusion algorithm design will be explained first, covering the Extended Kalman Filter (EKF) implementation that optimally combines position and orientation data from multiple sources, the state estimation procedures that maintain accurate robot pose estimates, and the uncertainty quantification methods that provide confidence measures for navigation decisions. The data synchronization implementation will be detailed, including the timestamp alignment procedures that ensure temporal consistency between sensor measurements, the interpolation algorithms that handle different update rates from SLAM and UWB systems, and the buffering mechanisms that maintain data integrity during temporary sensor outages. The orientation and position separation strategy will be examined, covering how RTABMap provides reliable orientation information while UWB delivers absolute position data, the coordinate transformation procedures that maintain consistency between different sensor coordinate frames, and the validation algorithms that detect and reject outlier measurements. The adaptive fusion parameters will be discussed, including the dynamic weighting strategies that adjust fusion coefficients based on sensor reliability, the fault detection mechanisms that identify sensor malfunctions or degraded performance, and the graceful degradation procedures that maintain operation when individual sensors fail.
+\subsubsection{Camera System Configuration}
+
+The Oak-D Pro integration utilizes stereo vision with synchronized RGB and depth image streams. The camera configuration operates at 400p mono resolution to balance processing performance with image quality on the Orin Nano platform. The system publishes synchronized image streams on \texttt{/right/image\_rect}, depth data on \texttt{/stereo/depth}, and camera calibration information on \texttt{/right/camera\_info}.
+
+The \texttt{stereo\_inertial\_node.launch.py} from the depthai package initializes the camera with depth alignment disabled (\texttt{depth\_aligned: false}) to maintain processing efficiency. The IMU data stream on \texttt{/imu} provides inertial measurements for visual-inertial odometry, while RViz visualization is disabled for headless operation (\texttt{enableRviz: false}).
+
+Camera calibration utilizes the factory calibration data embedded in the Oak-D Pro hardware, ensuring accurate depth estimation and stereo baseline measurements. The integration maintains the \texttt{oak-d-base-frame} as the primary coordinate reference, enabling consistent coordinate transformations throughout the system.
+
+\subsubsection{RTABMap Node Configuration}
+
+The RTABMap implementation utilizes four specialized nodes that work in concert to provide robust SLAM functionality. The \texttt{rgbd\_sync} node from the \texttt{rtabmap\_sync} package ensures temporal alignment of RGB and depth image streams, critical for accurate feature matching and depth association.
+
+The \texttt{rgbd\_odometry} node from \texttt{rtabmap\_odom} implements visual odometry using the synchronized image streams, providing continuous pose estimation even during mapping interruptions. The main \texttt{rtabmap} node from \texttt{rtabmap\_slam} handles loop closure detection, map management, and long-term localization capabilities.
+
+IMU integration utilizes the \texttt{imu\_filter\_madgwick\_node} for quaternion computation from raw IMU data. The filter operates in ENU (East-North-Up) world frame without magnetic field compensation (\texttt{use\_mag: false}) and disables transform publishing (\texttt{publish\_tf: false}) to prevent conflicts with the main localization system.
+
+\subsubsection{Database and Memory Management}
+
+The RTABMap database storage utilizes the home directory location \texttt{\textasciitilde/rtabmap.db} for persistent map storage. The database contains visual features, loop closure information, and occupancy grid data that enable relocalization across different operational sessions. Memory management parameters optimize performance for continuous operation without degradation during extended mapping sessions.
+
+The system implements appropriate buffer management and feature detection rates optimized for the social robotics application domain. The configuration balances memory usage against map quality to ensure sustainable long-term operation while maintaining sufficient detail for reliable relocalization.
+
+\subsection{SLAM Mapping and Localization Modes}
+
+The system implements distinct operational modes that enable both map creation and localization-only operation, providing flexibility for different deployment scenarios and research requirements.
+
+\subsubsection{Mapping Mode Implementation}
+
+The mapping mode utilizes the \texttt{rtab\_mapping.launch.py} configuration that enables full SLAM functionality including map building, loop closure detection, and visual feature database creation. The launch file initializes the complete RTABMap pipeline with mapping-optimized parameters.
+
+Key mapping parameters include \texttt{subscribe\_rgbd: True} for synchronized color and depth processing, \texttt{subscribe\_odom\_info: True} for enhanced odometry integration, and \texttt{approx\_sync: False} for precise temporal alignment. The \texttt{wait\_imu\_to\_init: True} parameter ensures proper IMU initialization before beginning mapping operations.
+
+The mapping process operates with continuous loop closure detection and feature database updates. The system maintains visual landmarks and occupancy grid information that supports both immediate navigation and future relocalization. Map visualization through \texttt{rtabmap\_viz} enables real-time monitoring of mapping progress and quality assessment.
+
+\subsubsection{Localization Mode Implementation}
+
+The localization mode utilizes the \texttt{rtab\_localization.launch.py} configuration that loads existing maps and disables new map creation. Critical parameters include \texttt{localization: True} to enable localization-only mode and \texttt{Mem/IncrementalMemory: False} to disable memory updates that would modify the existing map.
+
+The \texttt{Rtabmap/DetectionRate: 3.0} parameter optimizes loop closure detection frequency for localization scenarios, balancing computational load against relocalization performance. The system loads the existing database and continuously tracks robot position within the known map structure.
+
+Relocalization capabilities enable the robot to determine its position within previously created maps even after system restart or temporary tracking loss. The mode supports operation in known environments without requiring new map creation, essential for consistent experimental conditions.
+
+\subsubsection{Mode Switching and Database Management}
+
+The dual-mode architecture enables seamless transitions between mapping and localization operations through launch file selection. Map persistence utilizes the RTABMap database format that maintains visual features, loop closures, and occupancy grids across operational sessions.
+
+Database management includes map saving and loading protocols that ensure data integrity during mode transitions. The system supports multiple map databases for different operational environments, enabling deployment across various research locations without map conflicts.
+
+\subsection{Initial SLAM-Only System Limitations and Drift Issues}
+
+Initial testing of the pure RTABMap implementation revealed significant limitations that necessitated the development of the hybrid sensor fusion approach. Comprehensive testing documented systematic failures that compromised localization accuracy during extended operation.
+
+\subsubsection{Drift Accumulation Analysis}
+
+Extended operation testing revealed position drift accumulation reaching up to 1.2 meters during 30-minute operational sessions. The drift manifested as gradual position error accumulation that increased monotonically with operation time, particularly during movements in feature-poor environments or areas with repetitive visual patterns.
+
+Error source analysis identified visual odometry drift as the primary contributor, exacerbated by lighting changes, motion blur during movement, and insufficient visual features near walls and uniform surfaces. The accumulation proved particularly problematic for VR applications requiring precise robot positioning for immersive interaction.
+
+Statistical analysis of position errors demonstrated systematic bias in specific movement directions, indicating calibration issues and environmental factors affecting feature detection consistency. The four-position testing protocol revealed repeatability issues with standard deviations exceeding 40cm for identical positioning commands.
+
+\subsubsection{Relocalization Challenges}
+
+RTABMap relocalization failures occurred frequently in environments with insufficient distinctive features, requiring manual intervention through robot rotation to achieve sufficient visual feature matching. Feature-poor environments near walls or in corners consistently caused tracking loss, necessitating operator intervention to restore localization.
+
+Map corruption events required complete database reconstruction when loop closure detection failed catastrophically. These failures typically occurred during rapid movement or in areas with dynamic lighting conditions, compromising the entire mapping session and requiring restart from known positions.
+
+The relocalization process proved unreliable for autonomous operation, as successful position recovery often required specific robot orientations and environmental conditions that could not be guaranteed during normal social interaction scenarios.
+
+\subsection{UWB Positioning System Implementation}
+
+The Ultra-Wideband positioning system provides absolute position reference to complement visual SLAM, addressing the drift and relocalization limitations identified in pure SLAM operation. The UWB integration utilizes a third-party positioning package that interfaces with DecaWave hardware through serial communication.
+
+\subsubsection{Hardware Configuration and Integration}
+
+The UWB system utilizes the \texttt{uwb\_positioning} package configured through the \texttt{uwb.launch.py} file. The launch configuration specifies serial communication parameters including \texttt{serial\_port\_name: /dev/ttyACM0} and \texttt{serial\_baud\_rate: 115200} for interface with the UWB hardware module.
+
+The UWB tag integrates directly with the Tino robot platform with minimal interference to other systems. Anchor placement follows a strategic configuration that ensures optimal coverage of the operational environment while minimizing Non-Line-of-Sight (NLOS) conditions that degrade positioning accuracy.
+
+The system publishes absolute position data on the \texttt{/UWB/Pos} topic using \texttt{geometry\_msgs/Pose} message format, providing 3D coordinates that serve as the absolute reference for sensor fusion algorithms.
+
+\subsubsection{Positioning Algorithm and Performance}
+
+The UWB system implements multilateration techniques that calculate 3D position from time-of-flight measurements to multiple anchor points. The positioning algorithm includes NLOS mitigation strategies and noise filtering to provide stable position estimates under typical indoor operational conditions.
+
+Real-time performance characteristics include update rates suitable for robot control applications with latency measurements demonstrating compatibility with real-time system requirements. Accuracy evaluation shows centimeter-level precision under optimal conditions, with graceful degradation in challenging RF environments.
+
+\subsection{Sensor Fusion Between RTABMap Orientation and UWB Positioning}
+
+The hybrid localization system implements sophisticated sensor fusion that combines the complementary strengths of visual SLAM and UWB positioning. The fusion approach separates position and orientation estimation, utilizing UWB for absolute position reference while maintaining RTABMap for orientation data.
+
+\subsubsection{Fusion Algorithm Implementation}
+
+The sensor fusion implementation in the robot controller node utilizes a practical approach that combines UWB absolute positioning with RTABMap orientation data. The \texttt{\_create\_fused\_pose} method implements the core fusion logic that creates unified pose estimates from multiple sensor inputs.
+
+The fusion algorithm prioritizes UWB position data when available, falling back to RTABMap position estimates only when UWB communication fails. Position data from UWB undergoes coordinate frame transformation to align with the RTABMap reference frame, utilizing a configurable 11.5-degree rotation correction applied through the \texttt{\_apply\_rotation\_to\_pose} method.
+
+Orientation estimation maintains RTABMap quaternion data as the primary source, implementing sophisticated validation to detect orientation loss conditions. The system monitors for specific quaternion values (x=1.0, y=0.0, z=0.0, w=0.0) that indicate RTABMap odometry failure and automatically triggers recovery procedures.
+
+\subsubsection{Orientation Loss Detection and Recovery}
+
+The implementation includes robust orientation loss detection that monitors RTABMap output for invalid quaternion values indicating system failure. Upon detection of orientation loss, the system automatically triggers the \texttt{/reset\_odom} service to restart RTABMap odometry while maintaining position tracking through UWB data.
+
+Fallback orientation estimation utilizes movement direction analysis when RTABMap orientation becomes unreliable. The \texttt{\_estimate\_orientation\_from\_movement} method calculates orientation from position history, maintaining operational capability during RTABMap recovery periods. The system stores the last 5 position measurements to enable orientation estimation with minimum 5cm movement thresholds.
+
+Recovery validation continuously monitors RTABMap orientation data to detect system recovery. Upon detection of valid orientation values, the system automatically transitions back to RTABMap orientation while maintaining UWB position data, ensuring seamless operation without manual intervention.
+
+\subsubsection{Coordinate System Alignment}
+
+The sensor fusion system implements coordinate transformation procedures that align UWB coordinates with the SLAM coordinate frame. The transformation includes rotational alignment through quaternion multiplication that corrects for installation and calibration differences between sensor coordinate systems.
+
+The robot controller implements dynamic coordinate frame management that handles different reference frames from various sensors. Position data undergoes proper transformation from \texttt{oak\_right\_camera\_optical\_frame} for camera-based detections while maintaining consistency with UWB absolute coordinates.
+
+Calibration protocols enable adjustment of the coordinate alignment parameters without system modification. The 11.5-degree rotation correction represents empirically determined alignment that ensures consistent positioning across different operational scenarios and environmental conditions.
+
+\subsubsection{Performance Monitoring and Diagnostics}
+
+The fusion system implements comprehensive performance monitoring that tracks sensor health, fusion quality, and system reliability. The robot controller node maintains detailed statistics on UWB availability, RTABMap orientation validity, and fusion algorithm performance.
+
+Communication health monitoring tracks message rates from both UWB and RTABMap systems, providing immediate notification of sensor failures or communication problems. The system logs fusion status information including orientation source selection (RTABMap, movement estimation, or fallback) and position source preference (UWB or RTABMap).
+
+Diagnostic capabilities include real-time logging of sensor fusion decisions, position accuracy validation through movement consistency checking, and comprehensive error reporting that enables rapid identification of localization issues during operation. The monitoring system provides configurable logging levels to balance debugging information with system performance.
 
 
 \section{Kinematic Base Upgrade from Omnidirectional to Differential Drive}

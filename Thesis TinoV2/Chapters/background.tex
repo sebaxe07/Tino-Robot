@@ -37,7 +37,7 @@ LiDAR-based SLAM offers several advantages including operation in various lighti
 However, LiDAR systems present several challenges for social robotics applications. The mechanical scanning components can be sensitive to vibration, making them unsuitable for robots with soft or flexible structures. The cost and size of LiDAR systems can also be prohibitive for many social robot applications. Additionally, the range and resolution capabilities of LiDAR systems may represent overkill for typical indoor social interaction scenarios.
 
 \subsection{Sensor Fusion Approaches}
-Modern localization systems increasingly rely on sensor fusion techniques to combine information from multiple sensing modalities. Extended Kalman Filter (EKF) and particle filter approaches enable fusion of visual odometry, IMU data, and wheel encoder information to achieve robust localization performance~\cite{huang2018sensor}.
+Modern localization systems increasingly rely on sensor combination techniques to integrate information from multiple sensing modalities. Extended Kalman Filter (EKF) and particle filter approaches enable fusion of visual odometry, IMU data, and wheel encoder information to achieve robust localization performance~\cite{huang2018sensor}. However, implementing full probabilistic fusion requires significant development effort and computational resources.
 
 Inertial Measurement Units (IMUs) combined with wheel encoders represent a low-cost localization approach suitable for many mobile robot applications. While these systems offer advantages including low cost and independence from environmental conditions, they suffer from drift accumulation over time due to integration of noisy sensor measurements~\cite{borenstein1996measurement}.
 

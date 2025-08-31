@@ -11,6 +11,12 @@ The selection of the Tino V2 technology stack followed a requirements-driven pro
 
 Using these criteria, the final choices were: RTABMap for SLAM and map management, an Oak-D Pro (DepthAI) stereo camera for visual + depth input, UWB anchors for absolute positioning, and a YOLOv11-based pose estimation pipeline accelerated with TensorRT for real-time skeleton extraction. The justifications are summarised below.
 
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.85\linewidth]{Images/system_architecture.png}
+	\caption{High-level system architecture for Tino V2.}\label{fig-system-architecture}
+\end{figure}
+
 \subsection*{Why RTABMap over ORB‑SLAM3 and SVO}
 RTABMap provides robust multi-session map persistence, reliable relocalization and first-class ROS/ROS2 integration. During early experiments ORB‑SLAM3 and SVO presented compilation fragility on ARM64 and unstable atlas save/load behavior with the available cameras. RTABMap demonstrated stable map saving/loading and dependable relocalization in practice, making it preferable for a system where map reuse and long-term experiments are required.
 
@@ -28,31 +34,37 @@ During development multiple SLAM and VO approaches were evaluated. ORB‑SLAM3 w
 
 \section{Hybrid localization strategy}
 
-The localization architecture is intentionally hybrid: RTABMap supplies dense map information and orientation (visual odometry and loop closures) while UWB supplies absolute position corrections. The fusion follows an architecture with three functional layers:
+The localization architecture is intentionally hybrid: RTABMap supplies dense map information and orientation (visual odometry and loop closures) while UWB supplies absolute position corrections. The approach follows an architecture with three functional layers:
 
 \begin{enumerate}
-	\item \textbf{Sensor acquisition layer:} Oak‑D stereo frames, depth images, RTABMap odometry, UWB range fixes, and IMU/encoder measurements are published on ROS2 topics.
-	\item \textbf{Local estimation layer:} RTABMap performs visual odometry and graph optimization, producing local pose estimates and maps. Short-term pose updates come from visual odometry and IMU/encoder fusion where available.
-	\item \textbf{Global fusion layer:} a fusion node ingests RTABMap pose and UWB positions and performs an EKF-based correction (or tightly-coupled graph update) that maintains a consistent global pose used by the rest of the system (VR exporter, motion controller, logging).
+	\item \textbf{Sensor acquisition layer:} Oak‑D stereo frames, depth images, RTABMap odometry, UWB range fixes, and IMU measurements are published on ROS2 topics.
+	\item \textbf{Local estimation layer:} RTABMap performs visual odometry and graph optimization, producing local pose estimates and maps. Short-term pose updates come from visual odometry and IMU fusion where available.
+	\item \textbf{Global fusion layer:} a fusion node ingests RTABMap pose and UWB positions and performs simple sensor selection logic that maintains a consistent global pose used by the rest of the system (VR exporter, motion controller, logging).
 \end{enumerate}
 
-This structure leverages RTABMap's strength in building and maintaining appearance-based maps and UWB's absolute fixes to constrain long-term drift. In the Tino V2 implementation the global fusion logic is implemented inside the \texttt{robot\_controller\_node}: it ingests RTABMap poses, UWB fixes, IMU and encoder deltas and performs the EKF/graph corrections before publishing the consolidated \texttt{localization\_pose} topic consumed by the VR bridge and other consumers.
+This structure leverages RTABMap's strength in building and maintaining appearance-based maps and UWB's absolute fixes to constrain long-term drift. In the Tino V2 implementation the global fusion logic is implemented inside the \texttt{robot\_controller\_node}: it ingests RTABMap poses, UWB fixes, IMU deltas and performs simple sensor selection and fallback logic before publishing the consolidated \texttt{localization\_pose} topic consumed by the VR bridge and other consumers.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.85\linewidth]{Images/sensor_fusion.png}
+	\caption{Sensor selection and dataflow.}\label{fig-sensor-fusion}
+\end{figure}
 
 \subsection*{Sensor fusion contract}
 \begin{description}
-	\item[Inputs:] RTABMap pose (x, y, z, q), UWB position fixes (x, y, timestamp), IMU measurements (angular velocity, linear acceleration) and wheel encoder deltas. All inputs are timestamped and published on ROS2 topics.
-	\item[Outputs:] A best-effort global pose estimate (x, y, z, q) with an associated covariance; the node republishes the fused pose at a variable rate (typically 10--50\,Hz depending on sensor availability and compute load).
+	\item[Inputs:] RTABMap pose (x, y, z, q), UWB position fixes (x, y, timestamp), IMU measurements (angular velocity, linear acceleration). All inputs are timestamped and published on ROS2 topics.
+	\item[Outputs:] A best-effort global pose estimate (x, y, z, q) selected from available sensors; the node republishes the fused pose at a variable rate (typically 10--50\,Hz depending on sensor availability and compute load).
 	\item[Error modes:] \begin{itemize}[nosep,leftmargin=*]
-		\item \textbf{Missing UWB fixes:} the fusion falls back to visual odometry and increases the reported covariance to reflect reduced absolute accuracy.
-		\item \textbf{Visual tracking loss:} the system holds the last known map pose and uses UWB+IMU/encoders to attempt re-localization; if unsuccessful, it raises an operator-visible warning.
-		\item \textbf{Inconsistent UWB readings:} outlier detection (median filter / simple RANSAC) is applied and suspicious fixes are rejected; during instability the fusion increases pose covariance and favours visual/IMU estimates.
+		\item \textbf{Missing UWB fixes:} the fusion falls back to visual odometry from RTABMap.
+		\item \textbf{Visual tracking loss:} the system holds the last known map pose and uses UWB position with estimated orientation from movement direction; if unsuccessful, it raises an operator-visible warning.
+		\item \textbf{Inconsistent UWB readings:} basic validity checks are applied and the system falls back to RTABMap position when UWB appears invalid.
 	\end{itemize}
 \end{description}
 
 \subsection*{Edge cases and mitigations}
 \begin{itemize}
-	\item \textbf{NLOS UWB measurements:} detect through jumpy position deltas and increase reported covariance; rely on RTABMap until UWB stabilizes.
-	\item \textbf{Feature-poor areas (e.g., blank walls):} increase IMU/encoder reliance and prompt re-scan or operator-triggered relocalization.
+	\item \textbf{NLOS UWB measurements:} detect through basic position validation checks; rely on RTABMap until UWB stabilizes.
+	\item \textbf{Feature-poor areas (e.g., blank walls):} increase re-scan or operator-triggered relocalization.
 	\item \textbf{Camera occlusion by robot fabric:} use stereo depth fallback and restrict robot motion until visual lock is recovered.
 \end{itemize}
 
@@ -66,7 +78,13 @@ The human perception pipeline is designed to provide real-time 3D skeletons to t
 	\item \textbf{Transform to robot/world frame:} the 3D joint positions are transformed using the current fused global pose to provide world-relative skeletons for VR and navigation.
 \end{enumerate}
 
-The pipeline publishes a \texttt{human\_skeleton} ROS2 message containing a timestamped array of joints, each with position, covariance and a confidence score. This message enables downstream nodes to select stable skeletons for interaction logic and VR rendering.
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.85\linewidth]{Images/human_pipeline.png}
+	\caption{Human detection and depth-association pipeline.}\label{fig-human-pipeline}
+\end{figure}
+
+The pipeline publishes a \texttt{human\_skeleton} ROS2 message containing a timestamped array of joints, each with position and a confidence score. This message enables downstream nodes to select stable skeletons for interaction logic and VR rendering.
 
 \subsection*{Design contract for perception}
 Inputs: synchronized RGB frame, depth image, camera intrinsics, current global pose.
@@ -80,7 +98,7 @@ To improve modularity and maintainability the entire robot stack was migrated to
 \begin{itemize}
 	\item \textbf{Perception:} \texttt{rtabmap} (mapping/localization), \texttt{depthai} camera node, \texttt{yolo11\_pose\_node} (TensorRT inference + skeleton extraction).
 	\item \textbf{State and logging:} \texttt{vr\_data\_recorder\_node} (logging for VR and experiments).
-	\item \textbf{Control (includes fusion):} \texttt{robot\_controller\_node.py} implements the global fusion logic (EKF/graph corrections) and high-level behaviours; \texttt{hardware\_interface\_node.py} handles serial comms to Arduinos using device symlinks \texttt{/dev/ttyHEAD}, \texttt{/dev/ttyBASE}, \texttt{/dev/ttyLEG}.
+	\item \textbf{Control (includes fusion):} \texttt{robot\_controller\_node.py} implements simple sensor selection logic (UWB preferred for position, RTABMap for orientation) and high-level behaviours; \texttt{hardware\_interface\_node.py} handles serial comms to Arduinos using device symlinks \texttt{/dev/ttyHEAD}, \texttt{/dev/ttyBASE}, \texttt{/dev/ttyLEG}.
 	\item \textbf{I/O and integration:} \texttt{gamepad\_node.py}, \texttt{audio\_node.py}, \texttt{vr\_interface\_node.py} (VR bridge and topic translation).
 \end{itemize}
 
@@ -104,13 +122,18 @@ To verify the conceptual choices and measure system readiness the following mini
 \begin{enumerate}
 	\item \textbf{Build and integration:} RTABMap + DepthAI + ROS2 launch files must start and publish \texttt{localization\_pose} and camera topics without crashes for 10 minutes (smoke test).
 	\item \textbf{Perception correctness:} YOLOv11 TensorRT skeletons validated against recorded test sequences; per-joint reprojection error to depth must be within 20 cm for frontal poses.
-	\item \textbf{Fusion stability:} hybrid fusion must bound drift to under 50 cm over a 10 m path when UWB anchors are available, and be able to relocalize to saved maps.
+	\item \textbf{Fusion stability:} sensor selection logic must provide reasonable pose estimates when UWB anchors are available, and be able to relocalize to saved maps.
 	\item \textbf{End-to-end latency:} perception -> VR message latency measured and kept below 150 ms in typical configurations.
 \end{enumerate}
 
-Measured results from the R\&D: RTABMap with Oak‑D saved and reloaded maps reliably; YOLOv11 TensorRT provided real-time skeletons; Orin Nano peak current draw measured and verified as acceptable after power supply revisions.
+Measured results from the R\&D include:
+\begin{itemize}[nosep]
+	\item RTABMap with Oak‑D saved and reloaded maps reliably.
+	\item YOLOv11 (TensorRT) provided real-time skeletons suitable for VR export.
+	\item Orin Nano peak current draw was measured and verified as acceptable after power supply revisions.
+\end{itemize}
 
 \section{Summary}
 
-This chapter formalises the conceptual choices behind Tino V2: a ROS2-centred architecture using RTABMap for mapping, Oak‑D Pro for stereo depth, UWB for absolute positioning, and a YOLOv11+TensorRT pipeline for real-time human pose estimation. The chosen hybrid fusion approach balances metric accuracy, runtime performance and practical robustness demonstrated during the development phase.
+This chapter formalises the conceptual choices behind Tino V2: a ROS2-centred architecture using RTABMap for mapping, Oak‑D Pro for stereo depth, UWB for absolute positioning, and a YOLOv11+TensorRT pipeline for real-time human pose estimation. The chosen sensor selection approach balances metric accuracy, runtime performance and practical robustness demonstrated during the development phase.
 

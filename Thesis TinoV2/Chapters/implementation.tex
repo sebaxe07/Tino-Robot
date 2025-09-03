@@ -628,19 +628,189 @@ Breathing pattern modulation integrates with stereo positioning to create comple
 VR integration enables precise control over robot audio personality through real-time parameter adjustment, allowing users to influence robot audio expression through spatial positioning, proximity, and interaction intensity. This creates responsive audio feedback that enhances social presence and interaction naturalness.
 
 \section{YOLOv11 Pose Detection Implementation with TensorRT Optimization}
-This section will detail the implementation of YOLOv11 pose detection system optimized for real-time performance on the NVIDIA Orin Nano platform using pre-trained models. The YOLOv11 architecture selection will be explained first, covering the advantages of using the latest YOLO iteration for pose estimation tasks, including improved accuracy in detecting multiple humans simultaneously and optimized network architecture that balances detection accuracy with computational efficiency for embedded platforms. The pre-trained model utilization will be detailed, including the selection of the yolo11n-pose.pt model that provides an optimal balance between accuracy and computational requirements, the model format conversion from PyTorch (.pt) to ONNX (.onnx) format for cross-platform compatibility, and the final optimization to TensorRT engine (.engine) format that maximizes inference performance on the Orin Nano's GPU. The TensorRT optimization process will be examined, covering the engine generation procedures that optimize the neural network for the specific hardware platform and the memory allocation strategies that ensure efficient GPU utilization during real-time operation. The implementation architecture will be discussed, including the ROS2 node design that subscribes to camera topics from the Oak-D Pro and publishes human detection results, and the message publishing system that provides skeleton joint information with confidence scores for other system components.
+
+The YOLOv11 pose detection system provides real-time human skeleton tracking capabilities optimized for the NVIDIA Orin Nano platform through advanced TensorRT acceleration and efficient model deployment strategies.
+
+\subsection{YOLOv11 Architecture Selection and Model Optimization}
+
+The YOLOv11 architecture selection prioritizes the balance between detection accuracy and computational efficiency required for real-time embedded operation on the Orin Nano platform.
+
+\subsubsection{YOLOv11n-Pose Model Selection}
+
+The \texttt{yolo11n-pose.pt} model provides optimal performance characteristics for the Orin Nano's computational constraints while maintaining adequate accuracy for social robot interaction requirements. The nano variant (11n) utilizes a streamlined architecture with reduced parameter count compared to larger YOLO variants, enabling real-time inference on embedded hardware.
+
+Model architecture analysis demonstrates the YOLOv11n-pose network's capability to detect multiple humans simultaneously within the camera's field of view while maintaining frame rates suitable for interactive applications. The model's optimized backbone reduces computational overhead while preserving essential feature detection capabilities for robust human pose estimation.
+
+Pre-trained model utilization eliminates extensive training requirements by leveraging weights trained on large-scale pose estimation datasets. The pre-trained approach provides immediate deployment capability while ensuring robust performance across diverse human poses and environmental conditions typical of social robot applications.
+
+\subsubsection{Model Format Conversion Pipeline}
+
+The model optimization pipeline transforms the original PyTorch format through multiple conversion stages to achieve maximum performance on the target hardware. The conversion process begins with the native \texttt{.pt} PyTorch format and progresses through ONNX and TensorRT formats for optimal deployment.
+
+ONNX format conversion (\texttt{.onnx}) provides cross-platform compatibility and serves as an intermediate representation that enables hardware-specific optimizations. The ONNX conversion maintains model accuracy while enabling subsequent optimization passes that target the Orin Nano's specific GPU architecture.
+
+TensorRT engine generation (\texttt{.engine}) represents the final optimization stage, creating hardware-specific inference engines that maximize GPU utilization on the Orin Nano platform. The TensorRT optimization process includes layer fusion, precision calibration, and memory access optimization that significantly improve inference performance compared to standard deployment methods.
+
+\subsection{TensorRT Engine Optimization Process}
+
+The TensorRT optimization process generates highly efficient inference engines specifically optimized for the Orin Nano's GPU architecture and memory hierarchy.
+
+\subsubsection{Engine Generation and Hardware Optimization}
+
+TensorRT engine generation utilizes the Orin Nano's specific GPU capabilities to optimize network execution through layer fusion, kernel optimization, and memory access pattern optimization. The process analyzes the YOLOv11n-pose network structure and generates optimized CUDA kernels that maximize throughput while minimizing memory bandwidth requirements.
+
+Precision optimization techniques evaluate the network's sensitivity to reduced precision arithmetic, enabling mixed-precision computation that balances accuracy against performance. The optimization process may utilize INT8 quantization where appropriate while maintaining FP16 or FP32 precision for critical network layers that require higher numerical accuracy.
+
+Memory allocation strategies optimize GPU memory usage patterns to prevent memory fragmentation and minimize allocation overhead during inference operations. The TensorRT engine pre-allocates memory buffers and optimizes data transfer patterns between CPU and GPU memory to minimize inference latency.
+
+\subsubsection{Performance Profiling and Validation}
+
+Engine performance validation ensures that TensorRT optimizations maintain pose detection accuracy while achieving target inference rates. Performance profiling includes accuracy benchmarking against the original PyTorch model to verify that optimization processes do not compromise detection quality.
+
+Throughput analysis measures inference performance under various loading conditions including single and multi-person detection scenarios. Performance metrics include inference latency, GPU utilization, and memory bandwidth utilization that validate the engine's suitability for real-time social robot applications.
+
+Thermal analysis ensures that sustained inference operations remain within the Orin Nano's thermal limits during extended operation periods. Thermal validation includes continuous operation testing under maximum computational loads to ensure system stability and reliability.
+
+\subsection{ROS2 Node Architecture and Integration}
+
+The pose detection system integrates seamlessly with Tino's ROS2 architecture through a dedicated node that manages camera input, inference execution, and result publication.
+
+\subsubsection{Camera Topic Subscription and Data Flow}
+
+The \texttt{pose\_detection\_node.py} subscribes to Oak-D Pro camera topics including \texttt{/right/image\_rect} for monocular RGB input and \texttt{/stereo/depth} for corresponding depth information required for 3D coordinate calculation. The node implements efficient message handling with \texttt{CvBridge} conversion from ROS2 image messages to OpenCV format suitable for YOLO processing.
+
+Image preprocessing includes monocular to BGR conversion for YOLO compatibility, since the implementation uses the right camera feed converted from mono8 to BGR format. The preprocessing pipeline utilizes CPU-based OpenCV operations for format conversion while maintaining real-time performance through efficient memory management.
+
+Synchronization mechanisms maintain temporal alignment between RGB and depth image streams through callback-based processing that ensures corresponding depth information is available for each processed RGB frame. The implementation uses a latest-frame approach where \texttt{latest\_image} and \texttt{latest\_depth\_image} are synchronized for pose detection processing.
+
+\subsubsection{Inference Execution and Result Processing}
+
+TensorRT inference execution utilizes the pre-converted \texttt{yolo11n-pose.engine} model loaded from the package resource directory through \texttt{YOLO (model\_path)} initialization. The inference pipeline processes BGR images directly with configurable confidence thresholding (default 0.5) and \texttt{verbose=False} parameter to suppress detection logging output.
+
+Result post-processing extracts pose keypoints, confidence scores, and bounding box information from the \texttt{results[0]} object returned by YOLO inference. Post-processing operations include confidence-based filtering, closest person selection based on depth measurements, and coordinate extraction from the \texttt{results[0].boxes} and \texttt{results[0].keypoints} attributes.
+
+Error handling implements comprehensive exception management with detailed logging at configurable levels (INFO, DEBUG, ERROR) and graceful degradation when model loading fails or inference encounters errors. The system maintains operational continuity through try-catch blocks around critical processing sections.
 
 \section{Stereo Depth Integration for 3D Human Positioning}
-This section will present the integration of stereo depth information with 2D pose detection to achieve 3D human positioning capabilities using the Oak-D Pro camera system. The depth data utilization will be detailed first, covering how the stereo camera system provides depth information at detected keypoint locations, the depth value extraction process that determines 3D coordinates for each detected joint, and the coordinate system transformation from camera frame to robot coordinate frame. The 3D positioning methodology will be explained, including the process of combining 2D joint detections with corresponding depth values to create 3D skeleton representations and the real-time processing requirements that maintain system responsiveness while providing human positioning information. The practical implementation will be discussed, including how depth measurement works at varying distances and the integration with the robot's localization system to provide human positions relative to the robot's coordinate frame.
+
+The stereo depth integration system combines 2D pose detection results with Oak-D Pro depth information to provide accurate 3D human positioning capabilities essential for spatial awareness and interaction planning.
+
+\subsection{Oak-D Pro Depth Data Utilization}
+
+The Oak-D Pro camera system provides synchronized stereo depth information that enables precise 3D coordinate calculation for detected human pose keypoints.
+
+\subsubsection{Stereo Depth Acquisition and Processing}
+
+The Oak-D Pro stereo camera system generates depth maps through stereo vision algorithms that calculate depth values for each pixel in the synchronized color image. Depth data accuracy depends on stereo baseline, camera calibration quality, and environmental factors including lighting conditions and surface textures.
+
+Depth value extraction utilizes a median-based approach with a 9x9 pixel window around keypoint locations to obtain robust depth measurements. The \texttt{get\_depth\_at\_point} function implements outlier filtering by calculating median and standard deviation, then filtering values more than 2 standard deviations from the median to ensure reliable depth extraction.
+
+Depth data validation implements comprehensive quality filtering including zero-value rejection, outlier detection based on statistical analysis, and temporal smoothing over a configurable window size (default 3 frames). The validation process uses median filtering within pixel windows and consistency checks against reference depth values to maintain measurement reliability.
+
+For person detection, the system uses \texttt{get\_median\_depth} function that extracts depth from a central region of the bounding box with configurable padding (25\% by default), providing more stable depth measurements than single-pixel sampling while avoiding background contamination.
+
+\subsubsection{Coordinate System Transformation}
+
+Camera frame to robot coordinate transformation converts 3D keypoint coordinates using the \texttt{calculate\_3d\_position} function that utilizes camera intrinsic parameters from \texttt{camera\_info.k} array. The transformation extracts focal lengths \texttt{fx}, \texttt{fy} and principal point coordinates \texttt{cx}, \texttt{cy} from the camera calibration matrix.
+
+Intrinsic parameter utilization includes automatic unit conversion detection where depth values greater than 100 are converted from millimeters to meters, followed by depth calibration correction using configurable \texttt{depth\_scale\_factor} (default 0.575) and \texttt{depth\_offset} parameters derived from empirical calibration measurements.
+
+3D coordinate calculation applies the standard pinhole camera model: \texttt{x\_3d = (x - cx) * z / fx} and \texttt{y\_3d = (y - cy) * z / fy}, where corrected depth \texttt{z = z * depth\_scale\_factor + depth\_offset} accounts for systematic depth measurement biases in the Oak-D Pro stereo system.
+
+\subsection{3D Skeleton Generation and Validation}
+
+The 3D skeleton generation process combines 2D keypoint detections with corresponding depth values to create complete 3D human pose representations.
+
+\subsubsection{Keypoint Depth Association}
+
+Depth value assignment utilizes the 2D keypoint pixel coordinates to extract corresponding depth measurements from the stereo depth map. The assignment process includes validation to ensure depth measurements correspond to human body parts rather than background objects.
+
+Depth consistency validation utilizes a sophisticated temporal smoothing system where individual keypoint depths are validated against a reference depth calculated as the median of all valid keypoint depths. The \texttt{process\_skeleton} function implements outlier rejection where keypoint depths deviating more than the configurable \texttt{depth\_outlier\_threshold} (default 30\%) from the reference are replaced with the temporal median depth from a smoothing window.
+
+Missing depth handling addresses invalid keypoint scenarios through the reference depth fallback system. When keypoint coordinates are marked as invalid ($x \leq 0$ or $y \leq 0$) or depth extraction fails, the system utilizes the temporally smoothed reference depth calculated from all valid keypoints in the current frame, ensuring skeleton completeness even with partial occlusion.
+
+The temporal smoothing implementation maintains a \texttt{skeleton\_depth\_history} list with configurable window size (default 3 frames) that stores reference depths for median filtering over time, providing stable depth values that reduce measurement jitter while maintaining responsiveness to actual depth changes.
+
+\subsection{Real-time Processing and Performance Optimization}
+
+The 3D positioning system maintains real-time performance while processing high-resolution depth data and performing complex coordinate transformations.
+
+
 
 \section{Real-time Skeleton Tracking with 17 Key Body Joints}
-This section will detail the skeleton tracking implementation that extracts and processes 17 standard COCO keypoints for human posture detection. The keypoint detection framework will be explained first, covering the 17 keypoints detected by YOLOv11 including nose, eyes, ears, shoulders, elbows, wrists, hips, knees, and ankles, and the confidence scoring system that indicates detection reliability for each joint. The data processing pipeline will be detailed, including the extraction of keypoint coordinates and confidence scores from YOLOv11 output, the organization of joint information into structured skeleton representations, and the real-time publishing of skeleton data through ROS2 topics. The message format and data flow will be discussed, including the custom ROS2 message structures that transmit skeleton data with timestamps and the integration with other system components that can utilize human pose information for robot operation and VR data recording.
 
-\section{Performance Optimization and Real-time Operation}
-This section will present the optimization strategies implemented to achieve real-time performance of the human detection system on the Orin Nano platform. The computational optimization techniques will be detailed first, covering the TensorRT engine utilization that maximizes GPU inference performance and the memory management strategies that prevent resource exhaustion during continuous operation. The real-time performance characteristics will be explained, including the frame rate capabilities achieved by the optimized system and the processing latency from camera input to pose detection output. The system integration optimization will be examined, covering how the pose detection system operates alongside other robot functions including SLAM, localization, and movement control without creating performance bottlenecks. The practical performance evaluation will be discussed, including testing under various operational scenarios and system stability during extended operation periods.
+The skeleton tracking system processes YOLOv11 pose detection results to extract and organize 17 standard COCO keypoints into structured human pose representations suitable for social robot interaction analysis.
 
-\section{Integration with System Architecture}
-This section will detail the integration of human detection with Tino's overall system architecture and coordination with other robot components. The data flow architecture will be explained first, covering how human pose detection results are published through ROS2 topics and made available to other system components including robot controller nodes and navigation systems. The system coordination will be discussed, including how pose detection operates in parallel with other robot functions such as localization, movement control, and audio processing without creating performance bottlenecks. The ROS2 integration implementation will be examined, covering the message publishing system that provides skeleton joint information with timestamps and the node architecture that ensures reliable data transmission to other system components. Finally, the practical benefits will be addressed, covering how real-time human detection enhances the robot's operational awareness and enables improved human-robot interaction capabilities through better understanding of human presence and positioning.
+\subsection{COCO Keypoint Framework Implementation}
+
+The COCO keypoint framework provides a standardized representation for human pose detection that ensures compatibility with established computer vision tools and datasets.
+
+\subsubsection{17-Keypoint Detection Schema}
+
+The YOLOv11 pose detection system identifies 17 key body joints following the COCO pose estimation standard: nose (0), left eye (1), right eye (2), left ear (3), right ear (4), left shoulder (5), right shoulder (6), left elbow (7), right elbow (8), left wrist (9), right wrist (10), left hip (11), right hip (12), left knee (13), right knee (14), left ankle (15), and right ankle (16).
+
+Joint indexing follows the established COCO convention ensuring compatibility with existing pose analysis tools and datasets. The consistent indexing scheme enables straightforward integration with pose analysis algorithms and facilitates comparison with other human pose detection systems.
+
+Keypoint connectivity defines the skeletal structure through predefined joint relationships that represent human anatomical connections. The connectivity graph includes head structure (nose-eyes-ears), torso connections (shoulders-hips), and limb chains (shoulder-elbow-wrist, hip-knee-ankle) that enable skeletal validation and pose completeness assessment.
+
+\subsubsection{Confidence Scoring and Quality Assessment}
+
+Confidence score extraction provides reliability metrics for each detected keypoint, enabling quality-based filtering and uncertainty quantification. Confidence values range from 0.0 (undetected) to 1.0 (high confidence) and indicate the detection algorithm's certainty in keypoint localization accuracy.
+
+Quality thresholding implements confidence-based filtering that excludes low-confidence detections from downstream processing. Threshold values balance detection completeness against accuracy requirements, with typical thresholds ranging from 0.3 to 0.7 depending on application requirements and environmental conditions.
+
+Multi-person confidence handling manages confidence scores when multiple humans are detected simultaneously. The system maintains separate confidence profiles for each detected person while implementing consistency checks that ensure skeletal coherence within individual pose detections.
+
+\subsection{Data Processing Pipeline and Skeleton Organization}
+
+The data processing pipeline transforms raw YOLOv11 output into structured skeleton representations suitable for real-time robot applications.
+
+\subsubsection{Keypoint Coordinate Extraction}
+
+Raw network output processing extracts keypoint coordinates and confidence scores from YOLOv11 inference results. The extraction process handles variable-length outputs that accommodate different numbers of detected humans while maintaining consistent data structures for downstream processing.
+
+Coordinate normalization converts pixel coordinates to standardized coordinate systems that enable consistent processing regardless of camera resolution or field of view variations. Normalization includes scaling, translation, and coordinate system alignment that simplifies subsequent geometric calculations.
+
+\subsubsection{Skeleton Structure Validation}
+
+Geometric consistency validation implements anatomical constraints that verify reasonable joint relationships within detected skeletons. Validation includes bone length checks, joint angle limitations, and bilateral symmetry assessments that identify and filter implausible pose detections.
+
+Temporal consistency analysis compares consecutive pose detections to identify and smooth measurement noise while detecting rapid pose changes that indicate genuine human motion. Temporal filtering balances noise reduction against motion tracking accuracy to maintain responsive pose tracking.
+
+Completeness assessment evaluates skeleton quality based on the number and distribution of successfully detected keypoints. Assessment criteria include minimum keypoint requirements, critical joint detection (head, torso, limbs), and pose coverage metrics that indicate skeleton suitability for specific applications.
+
+\subsection{ROS2 Message Publishing and Data Distribution}
+
+The skeleton tracking system publishes pose data through ROS2 topics enabling integration with other robot systems and applications.
+
+\subsubsection{Custom Message Structure Design}
+
+ROS2 message design implements multiple specialized publishers for different data requirements: \texttt{/pose\_detection/image\_raw} for annotated detection images, \texttt{/human\_position} for smoothed human position using \texttt{PoseStamped} messages, \texttt{/human\_skeleton} for 3D skeleton visualization using \texttt{MarkerArray}, and \texttt{/human\_skeleton\_poses} for programmatic access to joint coordinates using \texttt{PoseArray} messages.
+
+Multi-person message handling focuses on closest person selection based on depth measurements, where the system identifies the person with minimum depth value and processes only that individual's skeleton data. This approach reduces computational overhead while ensuring consistent tracking of the most relevant human for interaction applications.
+
+Timestamp synchronization utilizes \texttt{self.get\_clock ().now ().to\_msg ()} for all published messages with consistent \texttt{header.frame\_id} set to the configurable camera frame (default: \texttt{oak\_right\_camera\_optical\_frame}), ensuring temporal alignment across all pose-related data streams.
+
+\subsection{Integration with Robot Controller and VR Systems}
+
+Skeleton data integration enables sophisticated human-robot interaction capabilities through real-time pose information distribution to various robot subsystems.
+
+\subsubsection{Robot Controller Integration}
+
+The robot controller subscribes to \texttt{/human\_position} topic for spatial awareness applications where human position data undergoes temporal smoothing through the \texttt{publish\_human\_position} function. This implementation maintains a configurable history buffer (default 5 positions) and publishes averaged coordinates to reduce measurement jitter while maintaining responsiveness to human movement.
+
+Pose-based behavior triggers can utilize the multiple data streams including raw skeleton data from \texttt{/human\_skeleton\_poses} for detailed joint analysis, smoothed position data from \texttt{/human\_position} for proximity detection, and visual markers from \texttt{/human\_skeleton} for debugging and visualization purposes.
+
+Safety monitoring implementation prioritizes closest person detection where the system automatically selects the human with minimum depth measurement for tracking, ensuring safety systems focus on the most immediate interaction partner while maintaining computational efficiency through single-person processing.
+
+\subsubsection{VR Data Recording and Transmission}
+
+VR system integration transmits skeleton data for immersive visualization and interaction analysis applications. Integration includes data formatting for Unity applications and network transmission protocols optimized for VR system requirements.
+
+Data recording capabilities capture complete skeleton tracking sessions for offline analysis and system evaluation. Recording includes synchronized pose data, camera images, and robot state information that enable comprehensive interaction analysis and system performance assessment.
+
+Bandwidth optimization implements data compression and selective transmission strategies that maintain VR system responsiveness while minimizing network overhead. Optimization techniques include keyframe detection, delta encoding, and adaptive quality adjustment based on network conditions and VR application requirements.
+
 
 \section{VR System Architecture and Unity Communication}
 This section will detail the comprehensive VR integration system that enables remote control and monitoring of Tino through Unity-based VR environments. The VR interface architecture will be explained first, covering the ROS2 \texttt{vr\_interface\_node} that serves as the central communication bridge between the robot's ROS2 system and external Unity applications, and the UDP communication protocol that provides real-time bidirectional data exchange for low-latency VR interaction. The Unity integration capabilities will be detailed, including the message structures for sending robot control commands from VR to ROS2 topics, the data reception system that provides robot pose, human detection, and audio information to Unity for visualization and interaction, and the networking configuration that enables flexible deployment across different network environments. The communication monitoring system will be examined, covering the configurable send rates for pose and skeleton data transmission, the health monitoring that tracks communication status and detects connection failures, and the message ordering system that ensures reliable data delivery and duplicate detection. The VR data recording functionality will be discussed, including the comprehensive recording system that captures all VR-relevant data streams for offline analysis.

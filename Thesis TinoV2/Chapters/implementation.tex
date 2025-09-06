@@ -134,6 +134,13 @@ The system implements appropriate buffer management and feature detection rates 
 
 The system implements distinct operational modes that enable both map creation and localization-only operation, providing flexibility for different deployment scenarios and research requirements.
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=6cm]{Images/mapping graph.png}
+    \caption{Mapping Graph}
+    \label{fig:mapping_graph}
+\end{figure}
+
 \subsubsection{Mapping Mode Implementation}
 
 The mapping mode utilizes the \texttt{rtab\_mapping.launch.py} configuration that enables full SLAM functionality including map building, loop closure detection, and visual feature database creation. The launch file initializes the complete RTABMap pipeline with mapping-optimized parameters.
@@ -239,6 +246,13 @@ The kinematic base redesign represents a fundamental shift from the problematic 
 
 The original omnidirectional base system utilizing the Triksta platform exhibited systematic failures under the operational demands of the 20kg Tino robot. Comprehensive analysis revealed multiple failure modes that compromised system reliability and operational capability.
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Images/OriginalTrikstaBase.jpg}
+    \caption{Original Triksta Base System}
+    \label{fig:original_triksta_base}
+\end{figure}
+
 \subsubsection{Omniwheel Mechanical Failures}
 
 The omniwheel rollers experienced systematic deformation under Tino's 20kg operational weight, with roller surfaces becoming squared due to continuous plastic deformation. This deformation created irregular rolling characteristics that manifested as vibration, reduced traction, and unpredictable movement behavior during social interaction scenarios.
@@ -257,6 +271,13 @@ Control system complexity increased significantly due to the omnidirectional kin
 
 The differential drive architecture selection prioritized mechanical simplicity, enhanced reliability, and improved maintainability while providing adequate maneuverability for social robot applications.
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{Images/NewBaseDifferentialDrive.jpg}
+    \caption{Complete Differential Drive Base with T-Structure Framework}
+    \label{fig:differential_base_complete}
+\end{figure}
+
 \subsubsection{Kinematic Simplification and Performance Benefits}
 
 The differential drive design eliminates the mechanical complexity of omnidirectional systems while maintaining the essential mobility requirements for social interaction scenarios. The two-wheel configuration with rear caster provides stable platform dynamics with reduced component count and simplified maintenance requirements.
@@ -272,14 +293,53 @@ The mechanical implementation required comprehensive base modification utilizing
 \subsubsection{T-Structure Construction with Aluminum Profiles}
 
 The T-structure design utilizes aluminum Item profiles to create a dynamic and adjustable framework that enables optimal wheel positioning for weight distribution and traction optimization. The modular profile system provides structural rigidity while allowing mechanical adjustments without complete system redesign.
-
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{Images/NewBaseDifferentialDrive (5).jpg}
+    \caption{Top View of Differential Drive Base with T-Structure}
+    \label{fig:differential_base_top}
+\end{figure}
 Wheel spacing optimization through the adjustable T-structure enables fine-tuning of track width to achieve proper balance and stability characteristics. The aluminum construction provides excellent strength-to-weight ratio while maintaining the structural integrity required for Tino's operational loads.
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Images/NewBaseDifferentialDrive (2).jpg}
+        \caption{Differential Drive Base Side View}
+        \label{fig:differential_base_side}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Images/NewBaseDifferentialDrive (3).jpg}
+        \caption{Caster Wheel supporting Rear of Base}
+        \label{fig:differential_base_caster}
+    \end{minipage}
+\end{figure}
 
 Motor mounting points integrate directly with the Item profile system through custom brackets that provide precise motor alignment and secure attachment. The modular design enables motor replacement or upgrade without structural modifications to the base platform.
 
 \subsubsection{Motor Upgrade and Drive System Enhancement}
 
 The motor upgrade to more powerful units addresses the thermal and torque limitations identified in the original system. The new motors provide enhanced heat dissipation capabilities and higher continuous torque ratings suitable for Tino's operational requirements.
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth,angle=-90]{Images/BaseNewMotors.jpg}
+        \caption{Base with New Motors (Top View)}
+        \label{fig:base_new_motors}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth,angle=-90]{Images/BaseNewMotors2.jpg}
+        \caption{Base with New Motors (Close up Side View)}
+        \label{fig:base_new_motors_side}
+    \end{minipage}
+\end{figure}
 
 Motor driver upgrade to the MDD10A units provides increased current handling capability and enhanced control responsiveness compared to the original dual-driver configuration. The single-driver solution simplifies electrical connections while providing superior performance characteristics for differential drive control.
 
@@ -295,13 +355,63 @@ Tire debeading issues occurred when the rubber tire separated from the plastic h
 
 Wheel hub reinforcement through hot-glue filling addressed the structural weakness in the plastic hub construction. This solution proved effective in preventing debeading while maintaining adequate traction characteristics, though it represents a temporary fix requiring future wheel system upgrade.
 
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Images/WheelSilicona (3).jpg}
+        \caption{Wheel Front View}
+        \label{fig:wheel_hotglue}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Images/WheelSilicona.jpg}
+        \caption{Wheel Mounted on Motor Shaft}
+        \label{fig:wheel_silicone}
+    \end{subfigure}
+    \caption{Wheel with Hot-Glue Filled Tires}
+    \label{fig:combined}
+\end{figure}
+
 \subsubsection{Fabric Protection and Bumper Implementation}
 
 Fabric interference prevention required the implementation of protective bumpers to prevent Tino's fabric covering from interfering with wheel operation. The bumper design provides physical separation between the moving wheels and the flexible fabric structure.
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=6cm,angle=-90]{Images/WheelVSFabric (2).jpg}
+    \caption{Wheel vs Fabric Interference}
+    \label{fig:wheel_vs_fabric}
+\end{figure}
+
 Bumper effectiveness testing demonstrated successful prevention of fabric entanglement in most operational scenarios, though some edge cases still require operator attention. The bumper system represents a practical solution that addresses the majority of fabric interference issues without compromising Tino's aesthetic design.
 
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Images/TinoBumper (4).jpg}
+        \caption{Tino Bumper Front View}
+        \label{fig:tino_bumper_front}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Images/TinoBumper (5).jpg}
+        \caption{Tino Bumper Top View}
+        \label{fig:tino_bumper_top}
+    \end{minipage}
+\end{figure}
+
 \subsection{Control System Adaptation for Differential Drive}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Images/TinoOnNewBase.jpg}
+    \caption{Tino on New Base}
+    \label{fig:tino_on_new_base}
+\end{figure}
 
 The control system required comprehensive modification to support differential drive kinematics while maintaining compatibility with existing command interfaces.
 
@@ -429,6 +539,13 @@ Material selection limitations in PLA printing created brittleness under repeate
 
 The first improvement iteration focused on servo axis alignment to redirect forces through proper load paths while maintaining the existing bearing-based connection system.
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=6cm, angle=-90]{Images/HeadArmV2.jpg}
+    \caption{Head Arm V1 Design}
+    \label{fig:head_arm_v1}
+\end{figure}
+
 \subsubsection{Force Path Optimization}
 
 The servo axis alignment improvement redirected head loads through the structural framework rather than servo mechanisms, reducing stress concentrations in servo internal components. Force analysis demonstrated significant reduction in lateral servo loading through proper geometric alignment.
@@ -445,9 +562,60 @@ Print orientation optimization aligned layer structure with primary stress direc
 
 Initial performance testing showed improved reliability and reduced failure frequency, though continued structural flexibility limited overall system performance improvement. The partial solution validated the design approach while highlighting remaining system limitations.
 
+\subsection{Persistent Flexibility Issues and Continued Arm Failures}
+
+Despite the servo axis alignment improvements implemented in the first design iteration, the Stewart platform continued to experience significant structural flexibility problems that ultimately led to repeated arm failures during extended operational periods.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=6cm, angle=-90]{Images/HeadArmFailure (2).jpg}
+    \caption{Head Arm Failure after Extended Use}
+    \label{fig:head_arm_failure}
+\end{figure}
+
+\subsubsection{Bearing Connection System Limitations}
+
+The retained bearing connection system on the servo side of each arm introduced excessive compliance that compromised head positioning precision and contributed to continued mechanical instability. The bearing housings, while providing smooth articulation, created weak points in the structural chain that allowed unwanted deflection under operational loads.
+
+Failure analysis revealed that the 3D printed bearing housings could not adequately transfer forces between the improved servo connections and the head platform. The plastic bearing housing geometry, despite geometric optimization, remained insufficient to handle the combination of static head weight and dynamic movement forces encountered during typical social robot operation.
+
+Repeated stress cycling during normal head movement operations caused progressive degradation of the bearing connection points, leading to increased play and eventual structural failure. The bearing system's inherent flexibility, while beneficial for smooth movement, created unacceptable structural compliance that compromised system reliability.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Images/HeadArmFailure (3).jpg}
+        \caption{Servo Side Bearing Connection Failure}
+        \label{fig:servo_bearing_failure}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Images/HeadArmFailure.jpg}
+        \caption{Head Arm Failure after Extended Use}
+        \label{fig:head_arm_failure}
+    \end{minipage}
+\end{figure}
+
+\subsubsection{Material and Design Constraint Analysis}
+
+The fundamental limitation resided in the conflict between the need for smooth articulation and structural rigidity within the constraints of 3D printed PLA construction. PLA material properties, while adequate for static structural components, proved insufficient for dynamic load-bearing connections subjected to repeated stress cycles.
+
+Print resolution limitations prevented the creation of bearing surfaces with sufficient precision and durability for sustained operation under Tino's operational loads. Layer adhesion characteristics in PLA created inherent weak points at stress concentration areas around bearing connection points.
+
+The design iteration validated the servo alignment approach while conclusively demonstrating that bearing-based connections could not provide the structural integrity required for reliable long-term operation. These findings necessitated a fundamental redesign approach that would eliminate the problematic bearing connections entirely.
+
 \subsection{Final Design Implementation: Rod End Integration}
 
 The final design iteration addressed remaining flexibility issues through the adoption of rod end (heim joint) connections on both ends of each Stewart platform arm.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=6cm]{Images/NewHeadDoubleJoint (4).jpg}
+    \caption{Head Arm V2 Design with Rod Ends}
+    \label{fig:head_arm_v2}
+\end{figure}
 
 \subsubsection{Rod End Selection and Implementation}
 
@@ -461,9 +629,26 @@ Joint articulation characteristics enable free rotation in all necessary axes wh
 
 The rod end implementation introduces acceptable head wobble during stationary periods due to the free articulation provided by the heim joints. Analysis indicates this wobble may actually enhance Tino's expressive capabilities by providing natural movement characteristics.
 
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Images/NewHeadDoubleJoint (6).jpg}
+        \caption{Head Arm with Rod Ends (Sway to right)}
+        \label{fig:head_arm_rod_end_right}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Images/NewHeadDoubleJoint (2).jpg}
+        \caption{Head Arm with Rod Ends (Sway to left)}
+        \label{fig:head_arm_rod_end_left}
+    \end{minipage}
+\end{figure}
+
 Structural strength analysis demonstrates significant improvement in mechanical robustness and load-bearing capability while accepting reduced precision during stationary periods due to joint flexibility. The trade-off provides enhanced durability and operational reliability for social robot applications.
 
-Load capacity testing validates the enhanced design's capability to handle operational loads without component failure or excessive wear. Longevity testing demonstrates sustained performance under extended operational scenarios typical of social robot research applications.
+Load capacity testing validates the enhanced design's capability to handle operational loads without component failure or excessive wear. Longevity testing demonstrates sustained performance under extended operational scenarios typical of social robot research applications, though some plastic degradation becomes visible over extended periods while maintaining functional operation.
 
 \subsection{Hybrid Construction Approach}
 
@@ -481,6 +666,13 @@ Cost optimization through selective material usage maintains reasonable componen
 
 The camera integration system addresses the unique challenges of mounting sophisticated sensing equipment within Tino's soft fabric structure while maintaining the robot's aesthetic appeal and operational capabilities.
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth, angle=-90]{Images/TripodOnHeadCamera.jpg}
+    \caption{Oak-D Pro Camera Mounted on Tripod System}
+    \label{fig:tripod_camera_mount}
+\end{figure}
+
 \subsection{Mounting System Design and Mechanical Integration}
 
 The camera mounting system provides stable support for the Oak-D Pro camera while integrating with Tino's existing Stewart platform head mechanism and fabric covering system.
@@ -493,6 +685,23 @@ Mechanical stability analysis demonstrates significant improvement in camera pos
 
 The camera mounting system operates independently from the Stewart platform head mechanism, providing dedicated stable positioning for the Oak-D Pro camera without mechanical coupling to head movements. This independent mounting ensures camera stability regardless of head articulation.
 
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth, angle=-90]{Images/TripodOnHeadCamera (3).jpg}
+        \caption{Oak-D Pro Camera Mounted on Tripod System (Side View)}
+        \label{fig:tripod_camera_mount_side}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Images/TripodOnHeadCamera (2).jpg}
+        \caption{Oak-D Pro Camera Mounted on Tripod System (Top View)}
+        \label{fig:tripod_camera_mount_top}
+    \end{minipage}
+\end{figure}
+
 \subsubsection{Structural Compatibility and Integration Challenges}
 
 The mounting system accommodates the existing servo head geometry while providing secure attachment points for the Oak-D Pro camera. Geometric constraints required custom bracket design that works within the available space while providing adequate support.
@@ -504,6 +713,22 @@ Mechanical interfaces utilize standard mounting hardware that enables camera rem
 \subsection{Fabric Integration and Visibility Solutions}
 
 The fabric integration system addresses the fundamental challenge of maintaining camera visibility while preserving Tino's fabric aesthetic and protecting sensitive camera components.
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Images/FirstTryCameraHiding.jpg}
+        \caption{Initial Camera Concealment Attempt (Front View)}
+        \label{fig:first_try_camera_hiding}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Images/FirstTryCameraHiding (3).jpg}
+        \caption{Initial Camera Concealment Attempt (Side View)}
+        \label{fig:camera_hiding_mesh}
+    \end{minipage}
+\end{figure}
 
 \subsubsection{Fabric Modification and Positioning Strategies}
 
@@ -525,13 +750,54 @@ Integration testing validates protection effectiveness while confirming maintain
 
 The camera shell system provides comprehensive protection and fabric integration while maintaining optimal camera performance and heat dissipation characteristics.
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=8cm, angle=-90]{Images/CameraCasingNoMesh.jpg}
+    \caption{Camera Casing without Mesh Covering}
+    \label{fig:camera_casing_no_mesh}
+\end{figure}
+
 \subsubsection{Custom Enclosure Design and Functionality}
 
 The custom shell design provides camera protection while maintaining cooling airflow through strategic ventilation openings that enable heat dissipation without compromising environmental protection. Shell geometry optimizes airflow characteristics while minimizing dust ingress.
 
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=0.8\textwidth]{Images/CameraCasingMesh.jpg}
+        \caption{Camera Casing with Mesh Covering (No camera)} 
+        \label{fig:camera_casing_mesh}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=0.8\textwidth]{Images/CameraCasingMesh (2).jpg}
+        \caption{Camera Casing with Mesh Covering (No camera)}
+        \label{fig:camera_casing_mesh_back}
+    \end{minipage}
+\end{figure}
+
 Attachment integration with the tripod mounting system provides secure shell mounting that enables camera access for maintenance while providing operational protection. Mounting system design enables shell removal without disturbing camera alignment or calibration.
 
 Thermal management considerations ensure adequate heat dissipation during extended operation periods, particularly during high-resolution stereo processing that generates significant thermal loads. Thermal testing validates adequate cooling under maximum operational loads.
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth, angle=-90]{Images/CameraCasingNoMesh (4).jpg}
+        \caption{Camera Casing without Mesh Covering (Side View)}
+        \label{fig:camera_casing_no_mesh_side}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth, angle=-90]{Images/CameraCasingNoMesh (3).jpg}
+        \caption{Camera Casing without Mesh Covering (Top View)}
+        \label{fig:camera_casing_no_mesh_top}
+    \end{minipage}
+\end{figure}
 
 \subsubsection{Velcro Fabric Control System}
 
@@ -582,6 +848,12 @@ The speaker system selection prioritizes clear audio reproduction capability wit
 Acoustic performance optimization addresses the challenges of speaker operation within a constrained and partially enclosed environment. Speaker mounting utilizes available space within the servo head structure while ensuring adequate acoustic coupling and preventing mechanical interference with head movement systems.
 
 Integration with existing head systems ensures speaker mounting does not interfere with Stewart platform operation, camera mounting, or other head-mounted systems. Geometric optimization provides secure speaker mounting while maintaining system accessibility for maintenance and adjustment.
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=6cm]{Images/SpeakerSetup (2).jpg}
+    \caption{Speaker Mounted within Servo Head Structure}
+    \label{fig:speaker_mount}
+\end{figure}
 
 \subsection{Dynamic Audio Generation and Custom Sound Design}
 
@@ -893,3 +1165,28 @@ Outgoing robot pose packets contain: message ordering, position coordinates (x, 
 \subsection{Communication Health Monitoring}
 
 The system implements comprehensive monitoring including rate validation against configured targets, connection status tracking with 3-second disconnection timeout, and message ordering validation for duplicate/loss detection. Automatic recovery includes counter reset upon reconnection and detailed diagnostic logging for system maintenance.
+
+\subsection{External Appearance Impact Assessment}
+
+Throughout the comprehensive Tino V2 implementation encompassing ROS2 architecture migration, kinematic base redesign, power system overhaul, Stewart platform improvements, camera integration, and audio system enhancements, the robot's external aesthetic appearance has been deliberately preserved to maintain its distinctive character and proven social interaction capabilities.
+
+The extensive internal modernization—from the fundamental shift to differential drive kinematics and NVIDIA Orin Nano computational platform to the complete redesign of head mechanisms and sensor integration—was strategically executed to operate within Tino's established external form factor. Each upgrade was carefully engineered to enhance technical capabilities while preserving the approachable aesthetic that defines Tino's social robotics effectiveness.
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth, angle=-90]{Images/TinoBefore.jpg}
+        \caption{Tino Before V2 Implementation}
+        \label{fig:tino_before_upgrade}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth, angle=-90]{Images/FinalTino.jpg}
+        \caption{Tino After Complete V2 Upgrade}
+        \label{fig:tino_after_upgrade}
+    \end{minipage}
+\end{figure}
+
+The preservation of Tino's external design language validates the holistic engineering approach that achieved dramatic internal technological advancement while maintaining the established visual identity essential for consistent human-robot interaction research. This balance between comprehensive technical modernization and aesthetic continuity ensures that the V2 platform delivers enhanced capabilities without compromising the social robotics research foundation established by the original design, enabling seamless transition to the upgraded system while maintaining research validity and experimental continuity.

@@ -141,3 +141,6 @@ pythontex-files-*/
 
 # Temporary files
 temp/
+
+# Thesis pdf output
+Thesis TinoV2/Thesis.pdf

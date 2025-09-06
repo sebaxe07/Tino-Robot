@@ -813,16 +813,83 @@ Bandwidth optimization implements data compression and selective transmission st
 
 
 \section{VR System Architecture and Unity Communication}
-This section will detail the comprehensive VR integration system that enables remote control and monitoring of Tino through Unity-based VR environments. The VR interface architecture will be explained first, covering the ROS2 \texttt{vr\_interface\_node} that serves as the central communication bridge between the robot's ROS2 system and external Unity applications, and the UDP communication protocol that provides real-time bidirectional data exchange for low-latency VR interaction. The Unity integration capabilities will be detailed, including the message structures for sending robot control commands from VR to ROS2 topics, the data reception system that provides robot pose, human detection, and audio information to Unity for visualization and interaction, and the networking configuration that enables flexible deployment across different network environments. The communication monitoring system will be examined, covering the configurable send rates for pose and skeleton data transmission, the health monitoring that tracks communication status and detects connection failures, and the message ordering system that ensures reliable data delivery and duplicate detection. The VR data recording functionality will be discussed, including the comprehensive recording system that captures all VR-relevant data streams for offline analysis.
+
+The VR integration system enables immersive remote control of Tino through Unity-based VR environments via a bidirectional UDP communication protocol that maintains real-time responsiveness while providing comprehensive robot state information.
+
+\subsection{VR Interface Node Architecture}
+
+The \texttt{vr\_interface\_node.py} serves as the central communication bridge between Tino's ROS2 ecosystem and Unity VR applications. The node subscribes to robot pose data (\texttt{/vr\_in/robot\_pose}), human skeleton information (\texttt{/vr\_in/human\_skeleton\_poses}), and audio output (\texttt{/vr\_in/audio\_output}), while publishing VR control commands to \texttt{/vr\_out/cmd\_vel} for base movement and \texttt{/vr\_out/head\_cmd} for head articulation.
+
+The multi-threaded architecture utilizes dedicated UDP listener threads with 1-second timeouts for non-blocking message reception while enabling simultaneous outgoing data transmission. Error handling includes automatic VR disconnection detection (3-second timeout) and message ordering counter reset upon reconnection.
+
+\subsection{UDP Communication Protocol}
+
+The protocol implements a three-port architecture for parallel data streams: port 5005 receives 32-byte VR command packets, port 5006 transmits 24-byte robot pose data, and port 5007 streams 208-byte skeleton data containing 17 COCO-format joints.
+
+Incoming command packets contain 3 floats for head control (pitch, pan, tilt), 2 integers for base commands (state 0-3, angular direction -1/0/1), 2 values for audio control (volume 0-255, orientation -1.0 to 1.0), and 1 integer for message ordering. Binary encoding uses \texttt{struct.unpack('fffiiffi', data)} with validation for length verification and parameter range checking.
+
+Outgoing pose packets include message ordering, position coordinates (x, y), orientation quaternion (z, w), and audio volume, optimized for 10Hz transmission rates. Message ordering counters enable detection of lost, duplicate, or out-of-order packets with automatic counter reset during reconnection events.
 
 \section{Atomic Movement System Design and 4-State Control Architecture}
-This section will present the revolutionary atomic movement system designed specifically for natural VR interaction, replacing the previous continuous control scheme with discrete, completion-guaranteed movements. The 4-state control framework will be explained first, covering the unified state architecture applied to both leg and base controllers where state 0 represents idle/resting position, state 1 implements expressive ``little push'' movements for attention-getting behaviors, state 2 provides timing synchronization cycles, and state 3 executes atomic movements that must complete before new commands can be processed. The leg controller implementation will be detailed, including the state 1 optimized 3-phase movement (50\% forward extension, 5\% pause, 45\% return), the state 2 forward extension to maximum reach with position locking mechanisms, and the state 3 return-to-neutral movement with button-press completion detection. The base controller design will be examined, covering the state 1 rapid forward-backward sequence for expressive pointing behaviors, the state 2 timing cycle that provides 1.5-second synchronization delay, and the state 3 atomic movements including forward translation and left/right rotation operations, each with 1.7-second execution duration. The synchronization architecture will be discussed, including the sophisticated locking system that prevents base state 3 execution until leg state 2 completion, and the pending command system that stores VR commands during ongoing operations and automatically executes them upon completion.
+
+The atomic movement system replaces traditional continuous control with discrete, completion-guaranteed movements ensuring perfect correspondence between VR user intentions and physical robot actions. The unified 4-state framework provides standardized behavior across both leg and base controllers.
+
+\subsection{4-State Control Framework}
+
+\subsubsection{State 0: Idle and Auto-Positioning}
+
+State 0 maintains neutral configurations with intelligent auto-positioning for the leg controller. The system uses absolute encoder feedback to calculate position differences from neutral (0 ticks) and applies appropriate motor commands: 110 RPM forward when negative position, 70 RPM backward when positive, and 90 RPM neutral when within 50 ticks. The base controller implements complete motion cessation with flag reset.
+
+\subsubsection{State 1: Expressive ``Little Push'' Movements}
+
+State 1 implements attention-getting behaviors. The leg controller uses an optimized 3-phase pattern: 50\% forward extension, 5\% pause, 45\% return over 1.2 seconds via the \texttt{vtLittlePush()} function. The base controller executes a 600ms delay, 200ms forward, 200ms backward sequence for directional indication.
+
+\subsubsection{State 2: Timing Synchronization}
+
+State 2 enables coordinated multi-component movements. The leg controller extends to maximum reach using \texttt{vtForwardOnly()} then activates position hold mode with PID control (Kp=2.0, Ki=0.1, Kd=0.5). The base controller implements a 1.5-second timing cycle with command queuing for received case 3 commands.
+
+\subsubsection{State 3: Atomic Movement Execution}
+
+State 3 executes completion-guaranteed operations. The leg controller returns to neutral using home button detection as completion criteria. The base controller provides three movement types: forward (angular=0), right rotation (angular=1), left rotation (angular=-1), each with 1.7-second duration.
+
+\subsection{Implementation Details}
+
+The leg controller maintains absolute position through encoder integration with direction-specific scaling (forward 1.15, backward 0.85) and automatic reset on button press. The base controller uses \texttt{updateBaseMovementByTime()} with millisecond-precision timing and sophisticated locking mechanisms (\texttt{isCase2Locked}) that coordinate execution between components.
 
 \section{Pulse-Based Command System for VR Integration}
-This section will detail the pulse-based command architecture that ensures perfect correspondence between VR user actions and physical robot movements. The pulse generation system will be explained first, covering the replacement of continuous signal transmission with discrete 3-cycle command pulses that automatically return to idle state, ensuring each VR interaction triggers exactly one complete robot movement cycle. The gamepad integration modifications will be detailed, including the removal of analog joystick control in favor of discrete button-based state commands, and the implementation of pulse timing that provides consistent command duration regardless of user input duration. The VR command processing will be examined, covering the UDP packet structure that transmits head control data (pitch, pan, tilt), base movement commands (state and angular direction), and audio parameters (volume and orientation), all synchronized with message ordering for reliable delivery. The atomic guarantee system will be discussed, including the movement completion assurance that prevents partial operations, the state machine locks that maintain movement integrity, and the natural interaction flow that ensures VR users always observe complete robot actions rather than interrupted movements. The timing optimization will be addressed, covering the precise 1.5-second state 2 timing cycle, the 1.7-second state 3 movement duration, and the synchronization mechanisms that coordinate multi-component movements for realistic dragging simulation.
+
+The pulse-based command architecture replaces continuous signal transmission with discrete 3-cycle command pulses that automatically return to idle state, ensuring each VR interaction triggers exactly one complete robot movement cycle.
+
+\subsection{Command Pulse Structure}
+
+Each user action generates three identical command cycles followed by automatic return to idle (command 0). Pulse timing uses 40ms intervals between transmissions (120ms total duration) to exceed network latency variations while preventing command accumulation. The 3-cycle repetition ensures reliable delivery across network interruptions with command validation through parameter consistency checking.
+
+VR input processing transforms continuous actions into discrete events through rising-edge triggering on button activation, preventing continuous command generation during extended holds. Input debouncing requires 200ms minimum intervals between commands while encoding current VR state (head orientation) at command initiation time.
+
+\subsection{Gamepad Development Integration}
+
+Gamepad control mirrors VR functionality using discrete button commands: X (state 1), Y (state 2), B (state 3), A (idle). Shoulder buttons enable combined movement testing with simultaneous angular direction commands. The identical pulse generation system ensures development testing accurately represents VR operational behavior.
+
+\subsection{VR Command Processing}
+
+UDP packet processing extracts commands from 32-byte binary structures using \texttt{struct.unpack('fffiiffi', data)} format. Head commands (pitch, pan, tilt) forward directly to robot controllers, while base commands (state 0-3, angular -1/0/1) trigger atomic movement execution. Message ordering uses 32-bit sequence numbers for duplicate detection and lost packet monitoring, with automatic counter reset during VR reconnection events.
 
 \section{Unity-ROS2 Communication Protocol and Message Structures}
-This section will present the comprehensive communication protocol designed for robust Unity-VR to ROS2 integration with optimal performance and reliability. The UDP communication architecture will be explained first, covering the multi-port configuration with port 5005 for incoming VR commands, port 5006 for outgoing robot pose data, and port 5007 for human skeleton transmission, enabling parallel data streams without interference. The incoming message format will be detailed, including the 32-byte VR command packets containing 3 floats for head control (pitch, pan, tilt), 2 integers for base commands (state 0--3, angular direction $-1/0/1$), 2 values for audio control (volume and orientation), and 1 integer for message ordering to detect lost or duplicate packets. The outgoing data structures will be examined, covering the 24-byte robot pose packets with position and orientation data fused from UWB and RTAB-Map systems, and the 208-byte skeleton packets containing exactly 17 COCO-format joints with consistent 3D coordinates for missing or occluded body parts. The configurable transmission rates will be discussed, including independent control of pose data frequency (default 10Hz), skeleton data frequency (default 10Hz), and expected incoming command rate (default 25Hz) to optimize performance for different network conditions and VR application requirements. The monitoring and debugging capabilities will be addressed, covering the comprehensive logging system that tracks communication health, the rate validation that ensures expected data flow, and the error detection mechanisms that identify connection problems and provide detailed diagnostic information for system maintenance.
 
-\section{Bidirectional Audio Communication and Spatial Processing}
-This section will detail the advanced audio communication system that enables natural voice interaction between VR users and the physical robot environment. The audio data flow architecture will be explained first, covering the microphone input processing that captures robot-side audio and transmits it to VR systems through ROS2 topics, the VR audio reception that provides spatial audio information with volume and orientation parameters for immersive sound positioning, and the bidirectional communication that enables real-time voice interaction between VR users and people in the robot's physical environment. The audio processing implementation will be detailed, including the 16-bit PCM audio sample handling through Int16MultiArray message structures, the real-time audio streaming that maintains low latency for natural conversation flow, and the volume and orientation control system that allows VR applications to adjust audio characteristics based on virtual positioning and interaction context. The spatial audio integration will be examined, covering the orientation parameter system that provides directional audio information in degrees, the volume control mechanisms that enable distance-based audio attenuation simulation, and the Unity integration capabilities that support immersive audio experiences in VR environments. The practical applications will be discussed, including the human-robot interaction enhancement through voice communication, the remote presence capabilities that allow VR users to participate in physical environment conversations, and the research data collection features that record audio interactions for analysis of human-robot communication patterns and social interaction behaviors.
+The Unity-ROS2 communication protocol implements optimized UDP-based data exchange designed for real-time VR applications with robust reliability and comprehensive monitoring capabilities.
+
+\subsection{Multi-Port UDP Architecture}
+
+The system uses three dedicated ports for parallel data streams: port 5005 (VR commands, 32-byte packets), port 5006 (robot pose, 24-byte packets), and port 5007 (skeleton data, 208-byte packets). This isolation prevents interference while enabling independent optimization for different data types and latency requirements.
+
+Network configuration supports flexible deployment through configurable IP addresses and transmission rates. Default settings target address 192.168.0.201 with pose/skeleton transmission at 10Hz and expected command reception at 25Hz.
+
+\subsection{Message Format Specifications}
+
+Incoming VR commands use a 32-byte binary format: 3 floats (head pitch/pan/tilt), 2 integers (base state 0-3, angular direction -1/0/1), 2 values (audio volume 0-255, orientation -1.0 to 1.0), and 1 integer (message ordering). Binary encoding uses \texttt{struct.unpack('fffiiffi', data)} with comprehensive validation for length, range, and ordering.
+
+Outgoing robot pose packets contain: message ordering, position coordinates (x, y), orientation quaternion (z, w), and audio volume in 24 bytes. Skeleton packets include 51 floats representing 17 COCO joints with default (0,0,0) coordinates for missing joints.
+
+\subsection{Communication Health Monitoring}
+
+The system implements comprehensive monitoring including rate validation against configured targets, connection status tracking with 3-second disconnection timeout, and message ordering validation for duplicate/loss detection. Automatic recovery includes counter reset upon reconnection and detailed diagnostic logging for system maintenance.

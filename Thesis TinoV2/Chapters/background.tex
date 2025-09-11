@@ -1,21 +1,26 @@
+This chapter establishes the theoretical and technological foundations necessary for understanding the Tino V2 system development. The evolution from the original Tino robot to Tino V2 required comprehensive analysis of existing technologies across multiple domains: simultaneous localization and mapping (SLAM), human detection and pose estimation, social robotics principles, and virtual reality integration techniques. Each technology area presents distinct challenges and opportunities that directly influence the design decisions made in Tino V2. The chapter begins with an examination of SLAM technologies, which form the cornerstone of autonomous robot navigation and environmental awareness. Following this, human detection and pose estimation technologies are analyzed for their role in enabling natural human-robot interaction. The principles of social robotics and human-robot interaction provide the theoretical framework for understanding how robots can effectively engage with humans in social contexts. Virtual reality integration techniques are then explored as emerging tools for enhancing robot control and telepresence capabilities. Finally, a detailed analysis of the legacy Tino system identifies specific limitations that motivated the comprehensive redesign undertaken in this work. This background analysis directly informs the technical requirements and design choices presented in subsequent chapters, providing the necessary context for understanding how Tino V2 addresses the limitations of existing approaches while advancing the state-of-the-art in social robotics.
+
 \section{Simultaneous Localization and Mapping (SLAM) Technologies}
 Simultaneous Localization and Mapping (SLAM) represents one of the fundamental challenges in autonomous mobile robotics, particularly for social robots operating in dynamic indoor environments~\cite{durrant2006simultaneous}. SLAM systems enable robots to navigate in unknown environments while building environmental maps, providing the dual advantage of localization and environmental perception~\cite{scaramuzza2011visual}. This section provides a comprehensive analysis of available SLAM and localization technologies, examining their theoretical foundations, practical implementations, and suitability for social robotics applications.
 
-\subsection{Feature-Based SLAM Systems}
+\subsection{Image-Based SLAM Methods}
+Image-based SLAM systems utilize visual information from cameras to perform simultaneous localization and mapping. These approaches can be categorized into feature-based, direct, and semi-direct methods, each with distinct advantages and limitations for social robotics applications.
+
+\subsubsection{Feature-Based SLAM Systems}
 Monocular visual SLAM systems, exemplified by PTAM~\cite{klein2007parallel} and later ORB-SLAM~\cite{mur2015orb}, utilize feature extraction and matching to estimate camera motion and reconstruct environmental structure. While computationally efficient, these systems suffer from inherent scale ambiguity and require careful initialization procedures to establish metric scale.
 
 ORB-SLAM3~\cite{campos2021orbslam3} represents the current state-of-the-art in feature-based SLAM systems, supporting multiple sensor configurations including monocular, stereo, and RGB-D cameras. The system demonstrates robust performance in feature-rich environments through sophisticated ORB feature matching algorithms and advanced loop closure detection mechanisms. The system offers several advantages including proven accuracy in academic benchmarks such as TUM RGB-D and EuRoC datasets, support for multiple sensor modalities, and robust handling of dynamic environments.
 
-However, practical implementation reveals significant challenges including substantial computational requirements that typically necessitate GPU optimization for real-time performance~\cite{huang2018sensor}. The system can struggle in textureless environments or under poor lighting conditions where ORB feature extraction becomes unreliable. Compilation and integration challenges, particularly on ARM64 architectures, can also present development obstacles.
+However, practical implementation reveals significant challenges including substantial computational requirements that typically necessitate GPU optimization for real-time performance~\cite{huang2021sensor}. The system can struggle in textureless environments or under poor lighting conditions where ORB feature extraction becomes unreliable. Compilation and integration challenges, particularly on ARM64 architectures, can also present development obstacles.
 
 Stereo visual odometry addresses the scale ambiguity problem by utilizing depth information from calibrated stereo camera pairs. These approaches provide accurate trajectory estimation through triangulation-based depth reconstruction, though they face significant challenges in textureless environments or under poor lighting conditions where feature matching becomes unreliable~\cite{geiger2011stereoscan}.
 
-\subsection{Direct and Semi-Direct SLAM Systems}
+\subsubsection{Direct and Semi-Direct SLAM Systems}
 Semi-direct Visual Odometry (SVO)~\cite{forster2014svo} offers reduced computational requirements compared to feature-based SLAM systems by tracking pixels directly rather than extracting and matching discrete features. The system demonstrates particular compatibility with fisheye and catadioptric cameras, making it suitable for wide field-of-view applications.
 
 Direct Sparse Odometry (DSO)~\cite{engel2017direct} represents another approach in this category, utilizing direct photometric error minimization without feature extraction. While these systems offer computational advantages, they require well-textured environments for reliable tracking and can struggle in highly dynamic scenes. SVO presents compilation challenges on ARM64 architectures and lacks comprehensive map management capabilities.
 
-\subsection{Graph-Based SLAM Systems}
+\subsubsection{Graph-Based SLAM Systems}
 RTABMap (Real-Time Appearance-Based Mapping)~\cite{labbe2019rtab} employs appearance-based mapping techniques combined with graph optimization to provide robust performance across various environmental conditions. The system offers comprehensive map management capabilities including reliable save and load functionality, multi-session mapping support, and effective relocalization performance.
 
 RTABMap demonstrates particular strength in practical deployment scenarios, offering stable map persistence and reliable relocalization capabilities essential for operational robot systems. The system provides excellent integration with standard robotics frameworks including ROS and ROS2, supporting various sensor configurations including RGB-D cameras and stereo systems.
@@ -37,9 +42,9 @@ LiDAR-based SLAM offers several advantages including operation in various lighti
 However, LiDAR systems present several challenges for social robotics applications. The mechanical scanning components can be sensitive to vibration, making them unsuitable for robots with soft or flexible structures. The cost and size of LiDAR systems can also be prohibitive for many social robot applications. Additionally, the range and resolution capabilities of LiDAR systems may represent overkill for typical indoor social interaction scenarios.
 
 \subsection{Sensor Fusion Approaches}
-Modern localization systems increasingly rely on sensor combination techniques to integrate information from multiple sensing modalities. Extended Kalman Filter (EKF) and particle filter approaches enable fusion of visual odometry, IMU data, and wheel encoder information to achieve robust localization performance~\cite{huang2018sensor}. However, implementing full probabilistic fusion requires significant development effort and computational resources.
+Modern localization systems increasingly rely on sensor combination techniques to integrate information from multiple sensing modalities. Extended Kalman Filter (EKF) and particle filter approaches enable fusion of visual odometry, IMU data, and wheel encoder information to achieve robust localization performance~\cite{huang2021sensor}. However, implementing full probabilistic fusion requires significant development effort and computational resources.
 
-Inertial Measurement Units (IMUs) combined with wheel encoders represent a low-cost localization approach suitable for many mobile robot applications. While these systems offer advantages including low cost and independence from environmental conditions, they suffer from drift accumulation over time due to integration of noisy sensor measurements~\cite{borenstein1996measurement}.
+Inertial Measurement Units (IMUs) combined with wheel encoders represent a low-cost localization approach suitable for many mobile robot applications. While these systems offer advantages including low cost and independence from environmental conditions, they suffer from drift accumulation over time due to integration of noisy sensor measurements~\cite{borenstein1996measurement}. Another fundamental limitation is their open-loop nature: these systems cannot verify whether their position estimates are correct or implement corrective measures, unlike vision-based or LiDAR-based SLAM systems that can match environmental features to detect and correct localization errors.
 
 Performance can be particularly poor on uneven surfaces where wheel slip affects encoder accuracy, or in applications involving impulse-based movement patterns that can saturate IMU sensors. The drift characteristics make these approaches unsuitable as standalone solutions for long-term autonomous operation.
 
@@ -100,44 +105,5 @@ Successful VR-robot integration faces several technical challenges including lat
 
 The integration requires sophisticated data processing pipelines to convert robot sensor data into meaningful VR representations while maintaining real-time performance constraints. Spatial registration between virtual environments and physical robot spaces presents additional challenges, particularly when virtual environments are custom-designed rather than directly mapped from physical spaces.
 
-\section{Legacy Tino System Analysis}
-Understanding the limitations and capabilities of the original Tino robot system provides essential context for the improvements implemented in Tino V2. This comprehensive analysis examines the legacy system architecture and identifies specific areas requiring enhancement.
 
-\subsection{Original System Architecture}
-The original Tino robot, developed as part of previous research in social robotics~\cite{cardillo2024thesis}, utilized a Raspberry Pi-based control architecture with inherent computational limitations. The system employed a Triskar omnidirectional base providing three-degree-of-freedom mobility through three independently controlled wheels arranged in a triangular configuration.
-
-While this omnidirectional configuration offered excellent theoretical maneuverability for social interaction scenarios, practical deployment revealed significant reliability issues under the robot's operational weight. Wheel degradation and mechanical wear patterns limited system reliability and required frequent maintenance interventions.
-
-The legacy sensor suite was extremely limited, consisting only of a basic Pi camera used exclusively for video streaming to remote operators. The system lacked any environmental sensors or perception capabilities, with the camera providing raw video feed without any on-board processing for computer vision, object detection, or environmental analysis.
-
-\subsection{Software Architecture Limitations}
-The original software architecture employed monolithic Python scripts with limited modularity and debugging capabilities. This approach made system maintenance and feature development challenging, particularly when attempting to integrate new sensing modalities or advanced control paradigms.
-
-Communication between system components was handled through simple serial interfaces without the robust messaging frameworks required for complex multi-sensor systems. The absence of standardized robotics frameworks made it difficult to leverage existing libraries and tools for advanced robotics capabilities.
-
-\subsection{VR Integration Requirements}
-The motivation for Tino V2 development arose primarily from requirements for VR integration that were not feasible within the original system constraints. VR teleoperation demands real-time processing of commands, sophisticated sensor fusion for accurate localization, and low-latency communication protocols.
-
-The legacy system lacked the computational capabilities required for real-time computer vision processing, advanced SLAM algorithms, or sophisticated human detection and pose estimation systems. These limitations prevented implementation of the data processing pipelines necessary for meaningful VR integration.
-
-Most critically, the original architecture could not support the real-time sensor fusion and environmental mapping capabilities required to provide accurate robot localization and human pose data to VR systems. Without these capabilities, meaningful VR-mediated social interaction remained impossible.
-
-\subsection{Identified Enhancement Requirements}
-Analysis of the legacy system revealed several critical enhancement requirements that motivated the comprehensive redesign undertaken in Tino V2:
-
-\begin{itemize}
-\item \textbf{Computational Platform Upgrade}: Migration from Raspberry Pi to more powerful embedded computing platforms capable of real-time AI processing and sophisticated sensor fusion.
-
-\item \textbf{Advanced Localization Systems}: Implementation of robust SLAM capabilities with map persistence and reliable relocalization for consistent spatial awareness.
-
-\item \textbf{Human Detection and Pose Estimation}: Integration of real-time computer vision systems capable of detecting and tracking human pose for VR representation.
-
-\item \textbf{Modular Software Architecture}: Development of ROS-based modular architecture enabling easier integration of new capabilities and robust debugging.
-
-\item \textbf{VR Communication Infrastructure}: Implementation of low-latency communication systems capable of real-time data exchange with VR environments.
-
-\item \textbf{Mechanical Reliability Improvements}: Redesign of the mobility platform to address reliability issues while maintaining expressive movement capabilities.
-\end{itemize}
-
-These requirements collectively defined the scope and objectives for the Tino V2 development project, establishing the foundation for the technological solutions presented in subsequent chapters.
 

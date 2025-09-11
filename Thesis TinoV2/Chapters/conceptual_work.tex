@@ -4,7 +4,7 @@ The selection of the Tino V2 technology stack followed a requirements-driven pro
 
 \begin{itemize}
 	\item \textbf{Functional accuracy}: localization and human pose estimation must be precise enough to feed the VR system with metric robot pose and 3D human joint positions.
-	\item \textbf{Real-time performance}: the chosen algorithms must run on the onboard compute (NVIDIA Orin Nano) with low latency to satisfy VR and teleoperation requirements (target end-to-end perception latency $<$ 100 ms where possible).
+	\item \textbf{Real-time performance}: the chosen algorithms must run on the onboard computer (NVIDIA Orin Nano) with low latency to satisfy VR and teleoperation requirements (target end-to-end perception latency $<$ 100 ms where possible).
 	\item \textbf{Integration and maintainability}: preference for solutions with ROS2 support, stable persistence (map save/load and relocalization), and reasonable build effort on ARM64.
 	\item \textbf{Robustness and recoverability}: the system must tolerate temporary sensor dropouts, relocalize from different viewpoints, and provide fallbacks to reduce mission-critical failures.
 \end{itemize}
@@ -30,7 +30,7 @@ UWB anchors provide absolute positioning that compensates SLAM drift and long‑
 YOLOv11, converted to TensorRT engines, provided the best trade-off between detection accuracy and inference throughput on the Orin Nano. The pipeline was extended to extract 17-joint skeletons and fuse per-joint depth from the Oak‑D stereo stream to produce metric 3D skeletons suitable for VR avatars.
 
 \subsection*{R\&D chronology and selection summary}
-During development multiple SLAM and VO approaches were evaluated. ORB‑SLAM3 was tested first for its academic strengths and multi‑sensor support but proved fragile to compile and unstable with the available cameras on ARM64. SVO was attempted as a lighter‑weight alternative but exhibited similar portability and map‑management limitations. RTABMap paired with the Oak‑D Pro ultimately provided the reliable map persistence, dependable relocalization and ROS2 interoperability required for repeated experimentation, and was therefore adopted as the primary mapping solution for Tino V2.
+During development multiple SLAM and VO approaches were evaluated. ORB‑SLAM3 was tested first for its academic strengths and multi‑sensor support, but proved fragile to compile and unstable with the available cameras on ARM64. SVO was attempted as a lighter‑weight alternative but exhibited similar portability and map‑management limitations. RTABMap paired with the Oak‑D Pro ultimately provided the reliable map persistence, dependable relocalization and ROS2 interoperability required for repeated experimentation, and was therefore adopted as the primary mapping solution for Tino V2.
 
 \section{Hybrid localization strategy}
 
@@ -53,7 +53,7 @@ This structure leverages RTABMap's strength in building and maintaining appearan
 \subsection*{Sensor fusion contract}
 \begin{description}
 	\item[Inputs:] RTABMap pose (x, y, z, q), UWB position fixes (x, y, timestamp), IMU measurements (angular velocity, linear acceleration). All inputs are timestamped and published on ROS2 topics.
-	\item[Outputs:] A best-effort global pose estimate (x, y, z, q) selected from available sensors; the node republishes the fused pose at a variable rate (typically 10--50\,Hz depending on sensor availability and compute load).
+	\item[Outputs:] A best-effort global pose estimate (x, y, z, q) selected from available sensors; the node republishes the fused pose at a variable rate (typically 10--50\,Hz depending on sensor availability and computational load).
 	\item[Error modes:] \begin{itemize}[nosep,leftmargin=*]
 		\item \textbf{Missing UWB fixes:} the fusion falls back to visual odometry from RTABMap.
 		\item \textbf{Visual tracking loss:} the system holds the last known map pose and uses UWB position with estimated orientation from movement direction; if unsuccessful, it raises an operator-visible warning.
@@ -74,8 +74,8 @@ The human perception pipeline is designed to provide real-time 3D skeletons to t
 
 \begin{enumerate}
 	\item \textbf{2D detection and pose estimation:} YOLOv11 (TensorRT engine) runs on RGB frames to detect humans and estimate 2D keypoints (17 joints).
-	\item \textbf{Depth association:} for each detected joint, the pipeline samples the Oak‑D stereo depth (with median filtering in a small neighbourhood) to recover the joint's metric z coordinate and compute an (x,y,z) in the camera frame.
-	\item \textbf{Transform to robot/world frame:} the 3D joint positions are transformed using the current fused global pose to provide world-relative skeletons for VR and navigation.
+	\item \textbf{Depth association:} for each detected joint, the pipeline samples the Oak‑D stereo depth (with median filtering in a small neighbourhood) to recover the joint's metric z coordinate and compute the (x,y,z) position in the camera frame.
+	\item \textbf{Transform to robot/world frame:} the 3D joint positions are transformed using the current fused global pose to provide world-relative skeleton's coordinates for VR and navigation.
 \end{enumerate}
 
 \begin{figure}[H]

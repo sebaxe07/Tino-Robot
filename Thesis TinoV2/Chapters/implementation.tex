@@ -24,7 +24,11 @@ The implementation includes comprehensive error handling for gamepad connectivit
 
 The \texttt{hardware\_interface\_node.py} manages serial communication with three distinct Arduino subsystems through dedicated device symlinks: \texttt{/dev/ttyBASE}, \texttt{/dev/ttyLEG}, and \texttt{/dev/ttyHEAD}. The implementation addresses device identification challenges through udev rules that create consistent device paths based on Arduino serial numbers.
 
-The node implements parallel serial communication threads for each Arduino subsystem, enabling simultaneous command transmission and status monitoring. Each thread operates at 115200 baud with configurable message repetition (default 3 repetitions) to ensure reliable command delivery. The command format follows the structure: \texttt{BF:value\_BB:value\_HP:value\_HX:value\_HY:value}, where BF represents base forward movement (leg states), BB represents base rotation, HP controls head pitch, and HX/HY control head pan and tilt respectively.
+The node implements parallel serial communication threads for each Arduino subsystem, enabling simultaneous command transmission and status monitoring. Each thread operates at 115200 baud with configurable message repetition (default 3 repetitions) to ensure reliable command delivery. The command format follows the structure: 
+
+\texttt{BF:value\_BB:value\_HP:value\_HX:value\_HY:value}, 
+
+where BF represents base forward movement (leg states), BB represents base rotation, HP controls head pitch, and HX/HY control head pan and tilt respectively.
 
 Error handling includes automatic device discovery, connection monitoring, and graceful degradation when individual Arduino systems become unavailable. The node publishes Arduino feedback messages to the \texttt{arduino\_feedback} topic and provides comprehensive debugging capabilities through configurable logging levels.
 
@@ -165,7 +169,7 @@ Database management includes map saving and loading protocols that ensure data i
 
 \subsection{Initial SLAM-Only System Limitations and Drift Issues}
 
-Initial testing of the pure RTABMap implementation revealed significant limitations that necessitated the development of the hybrid sensor fusion approach. Comprehensive testing documented systematic failures that compromised localization accuracy during extended operation.
+Initial testing of the pure RTABMap implementation revealed significant limitations that needed the development of the hybrid sensor fusion approach. Comprehensive testing documented systematic failures that compromised localization accuracy during extended operation.
 
 \subsubsection{Drift Accumulation Analysis}
 
@@ -177,7 +181,7 @@ Statistical analysis of position errors demonstrated systematic bias in specific
 
 \subsubsection{Relocalization Challenges}
 
-RTABMap relocalization failures occurred frequently in environments with insufficient distinctive features, requiring manual intervention through robot rotation to achieve sufficient visual feature matching. Feature-poor environments near walls or in corners consistently caused tracking loss, necessitating operator intervention to restore localization.
+RTABMap relocalization failures occurred frequently in environments with insufficient distinctive features, requiring manual intervention through robot rotation to achieve sufficient visual feature matching. Feature-poor environments near walls or in corners consistently caused tracking loss, requiring operator intervention to restore localization.
 
 Map corruption events required complete database reconstruction when loop closure detection failed catastrophically. These failures typically occurred during rapid movement or in areas with dynamic lighting conditions, compromising the entire mapping session and requiring restart from known positions.
 
@@ -207,7 +211,7 @@ The hybrid localization system implements sophisticated sensor fusion that combi
 
 \subsubsection{Fusion Algorithm Implementation}
 
-The sensor fusion implementation in the robot controller node utilizes a practical approach that combines UWB absolute positioning with RTABMap orientation data. The \texttt{\_create\_fused\_pose} method implements the core fusion logic that creates unified pose estimates from multiple sensor inputs.
+ The \texttt{\_create\_fused\_pose} method implements the core fusion logic that creates unified pose estimates from multiple sensor inputs.
 
 The fusion algorithm prioritizes UWB position data when available, falling back to RTABMap position estimates only when UWB communication fails. Position data from UWB undergoes coordinate frame transformation to align with the RTABMap reference frame, utilizing a configurable 11.5-degree rotation correction applied through the \texttt{\_apply\_rotation\_to\_pose} method.
 
@@ -240,24 +244,24 @@ Diagnostic capabilities include real-time logging of sensor fusion decisions, po
 
 \section{Kinematic Base Upgrade from Omnidirectional to Differential Drive}
 
-The kinematic base redesign represents a fundamental shift from the problematic omnidirectional Triksta system to a robust differential drive architecture that addresses the mechanical limitations identified during extended operational testing.
+The kinematic base redesign represents a fundamental shift from the problematic omnidirectional Triskar system to a robust differential drive architecture that addresses the mechanical limitations identified during extended operational testing.
 
 \subsection{Original System Limitations and Failure Analysis}
 
-The original omnidirectional base system utilizing the Triksta platform exhibited systematic failures under the operational demands of the 20kg Tino robot. Comprehensive analysis revealed multiple failure modes that compromised system reliability and operational capability.
+The original omnidirectional base system utilizing the Triskar platform exhibited systematic failures under the operational demands of the 20kg Tino robot. Comprehensive analysis revealed multiple failure modes that compromised system reliability and operational capability.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{Images/OriginalTrikstaBase.jpg}
-    \caption{Original Triksta Base System}
-    \label{fig:original_triksta_base}
+    \includegraphics[width=0.8\textwidth]{Images/OriginalTriskarBase.jpg}
+    \caption{Original Triskar Base System}
+    \label{fig:original_Triskar_base}
 \end{figure}
 
 \subsubsection{Omniwheel Mechanical Failures}
 
 The omniwheel rollers experienced systematic deformation under Tino's 20kg operational weight, with roller surfaces becoming squared due to continuous plastic deformation. This deformation created irregular rolling characteristics that manifested as vibration, reduced traction, and unpredictable movement behavior during social interaction scenarios.
 
-Roller bearing failures occurred frequently in the rear omniwheel due to the dragging forces encountered during forward movement and turning operations. The omnidirectional capability proved unnecessary for social robot applications, as Tino's interaction patterns primarily required forward movement with turning capabilities rather than true omnidirectional motion.
+Roller bearing failures occurred frequently in the rear omniwheel due to the dragging forces encountered during forward movement and turning operations. The omnidirectional capability proved unnecessary for Tino, as its interaction patterns primarily required forward movement with turning capabilities rather than true omnidirectional motion.
 
 Load distribution analysis revealed that the three-wheel configuration created uneven weight distribution with the rear wheel experiencing excessive drag forces. This asymmetric loading accelerated wear patterns and contributed to premature component failure, particularly during sustained operation periods required for social interaction research.
 
@@ -265,11 +269,11 @@ Load distribution analysis revealed that the three-wheel configuration created u
 
 The original motor configuration struggled to provide consistent torque under the sustained loading conditions required for Tino's operation. Motor heating issues developed during extended use, leading to performance degradation and potential component damage that threatened operational reliability.
 
-Control system complexity increased significantly due to the omnidirectional kinematics, requiring sophisticated coordination between three drive motors while compensating for mechanical variability and wear. The VirHas library dependency created maintenance challenges and limited customization capabilities for the specific requirements of the Tino platform.
+Control system complexity increased significantly due to the omnidirectional kinematics, requiring sophisticated coordination between three drive motors while compensating for mechanical variability and wear. The dependency to the VirHas library, used for the Triskar control, created maintenance challenges and limited customization capabilities for the specific requirements of the Tino platform.
 
 \subsection{Differential Drive Architecture Design}
 
-The differential drive architecture selection prioritized mechanical simplicity, enhanced reliability, and improved maintainability while providing adequate maneuverability for social robot applications.
+The differential drive architecture selection prioritized mechanical simplicity, enhanced reliability, and improved maintainability while providing adequate maneuverability for Tino.
 
 \begin{figure}[H]
     \centering
@@ -280,11 +284,11 @@ The differential drive architecture selection prioritized mechanical simplicity,
 
 \subsubsection{Kinematic Simplification and Performance Benefits}
 
-The differential drive design eliminates the mechanical complexity of omnidirectional systems while maintaining the essential mobility requirements for social interaction scenarios. The two-wheel configuration with rear caster provides stable platform dynamics with reduced component count and simplified maintenance requirements.
+The differential drive design eliminates the mechanical complexity of omnidirectional systems while maintaining the essential mobility requirements for Tino's social interaction scenarios. The two-wheel configuration with rear caster provides stable platform dynamics with reduced component count and simplified maintenance requirements.
 
 Weight distribution optimization utilizes the two front drive wheels to support the majority of Tino's operational weight while the rear caster wheel provides stability without bearing significant driving loads. This configuration eliminates the dragging forces that compromised the original omnidirectional system.
 
-Maneuverability analysis demonstrates that differential drive provides adequate turning capability for social robot applications through differential wheel speed control. The simplified kinematics enable more precise movement control and improved repeatability compared to the three-wheel omnidirectional system.
+Maneuverability analysis demonstrates that differential drive provides adequate turning capability through differential wheel speed control. The simplified kinematics enable more precise movement control and improved repeatability compared to the three-wheel omnidirectional system.
 
 \subsection{Mechanical Implementation and Structural Modifications}
 
@@ -407,19 +411,18 @@ Bumper effectiveness testing demonstrated successful prevention of fabric entang
 \subsection{Control System Adaptation for Differential Drive}
 
 \begin{figure}[H]
-    \centering
-    \includegraphics[width=0.8\textwidth]{Images/TinoOnNewBase.jpg}
-    \caption{Tino on New Base}
+    \centering    \includegraphics[width=0.8\textwidth]{Images/TinoOnNewBase.jpg}
+    \caption{Tino's new Base}
     \label{fig:tino_on_new_base}
 \end{figure}
 
-The control system required comprehensive modification to support differential drive kinematics while maintaining compatibility with existing command interfaces.
+The control system required comprehensive modification to support differential drive kinematics while maintaining compatibility with existing command interfaces and synchronization with the foot movement.
 
 \subsubsection{Custom PID Controller Implementation}
 
-The PID controller development specifically targets differential drive characteristics, replacing the VirHas library dependency with custom control algorithms optimized for Tino's platform. The implementation utilizes classical PID control with Kp=7.3, Ki=5.6, and Kd=0.2 parameters tuned specifically for the MDD10A motor drivers and Tino's mechanical characteristics.
+The PID controller development specifically targets differential drive characteristics, replacing the VirHas library with custom control algorithms optimized for Tino's platform. The implementation utilizes classical PID control with Kp=7.3, Ki=5.6, and Kd=0.2 parameters tuned specifically for the MDD10A motor drivers and Tino's mechanical characteristics.
 
-Motor speed calculation employs encoder feedback with 1920 pulses per revolution (PPR) encoders to determine actual wheel velocities in rad/s. The \texttt{getMotorSpeed()} function calculates instantaneous speed based on encoder position changes over time intervals, enabling closed-loop speed control for precise movement execution.
+Motor speed calculation employs encoder feedback with 1920 pulses per revolution (PPR) encoders to determine actual wheel speed  in rad/s. The \texttt{getMotorSpeed()} function calculates instantaneous speed based on encoder position changes over time intervals, enabling closed-loop speed control for precise movement execution.
 
 The \texttt{updatePid()} function implements the complete PID algorithm with integral term reset on setpoint changes to prevent windup, derivative calculation for damping, and output limiting to ±255 PWM range. This ensures stable motor control without oscillation while maintaining responsive movement characteristics.
 
@@ -433,7 +436,7 @@ The power system redesign addresses the comprehensive requirements of the NVIDIA
 
 \subsection{Power Requirements Analysis and System Specifications}
 
-The NVIDIA Orin Nano platform introduces significantly different power requirements compared to the original Raspberry Pi system, requiring comprehensive power architecture redesign to support enhanced computational capabilities.
+
 
 \subsubsection{Orin Nano Power Consumption Characteristics}
 
@@ -441,7 +444,7 @@ The Orin Nano requires 19V DC input with power consumption characteristics that 
 
 Power consumption analysis under various operational modes demonstrates peak consumption of 38W during maximum load conditions, with sustained operation typically requiring 25-27W. The power profile exhibits significant variation based on computational load, requiring robust power delivery capable of handling transient peaks without voltage drop.
 
-Computational load correlation shows direct relationship between power consumption and processing intensity, with SLAM operations, TensorRT inference, and audio processing contributing the highest power demands. The variable load characteristics necessitate stable power delivery across the full operational range.
+Computational load correlation shows direct relationship between power consumption and processing intensity, with SLAM operations, TensorRT inference, and audio processing requiring the highest power demands. The variable load characteristics necessitate stable power delivery across the full operational range.
 
 \subsubsection{Auxiliary System Power Requirements}
 
@@ -529,7 +532,7 @@ Mechanical analysis demonstrated that proper force transmission should flow thro
 
 \subsubsection{Structural Flexibility and Arm Failures}
 
-The connecting arms exhibited excessive structural flexibility that reduced head positioning precision and contributed to mechanical instability during movement sequences. Flex analysis revealed inadequate stiffness-to-weight ratio in the original arm design, creating unwanted compliance in the kinematic chain.
+The connecting arms exhibited excessive structural flexibility that reduced head positioning precision and contributed to mechanical instability during movement sequences. Flexibility analysis revealed inadequate stiffness-to-weight ratio in the original arm design, creating undesired compliance in the kinematic chain.
 
 Repeated arm failures occurred due to inadequate load distribution and material selection that could not withstand the combination of static head weight and dynamic movement forces. Failure analysis identified stress concentration points where 3D printed components experienced crack initiation and propagation.
 
@@ -664,7 +667,7 @@ Cost optimization through selective material usage maintains reasonable componen
 
 \section{Camera Integration and Mounting Solutions}
 
-The camera integration system addresses the unique challenges of mounting sophisticated sensing equipment within Tino's soft fabric structure while maintaining the robot's aesthetic appeal and operational capabilities.
+The camera integration system addresses the unique challenges of mounting sophisticated sensing equipment within Tino's soft fabric structure while maintaining the robot's aesthetic characteristics and operational capabilities, while not putting any focal point in evidence.
 
 \begin{figure}[H]
     \centering
@@ -819,11 +822,7 @@ Mesh covering implementation conceals camera presence from casual observation wh
 
 Optical testing validates maintained image quality and depth sensing performance through the concealment system. Testing includes calibration verification and performance comparison against uncovered camera operation to ensure minimal performance impact.
 
-\subsubsection{Heat Management and Sustained Operation}
 
-Heat dissipation optimization addresses the Oak-D Pro camera's thermal requirements during sustained operation, particularly during high computational load scenarios including simultaneous SLAM processing and human detection.
-
-Cooling system design utilizes strategic airflow management that enables heat dissipation while maintaining environmental protection. Thermal testing validates sustained operation capability under maximum computational loads without thermal throttling.
 
 \section{Audio System Integration}
 
@@ -1130,7 +1129,7 @@ The leg controller maintains absolute position through encoder integration with 
 
 \section{Pulse-Based Command System for VR Integration}
 
-The pulse-based command architecture replaces continuous signal transmission with discrete 3-cycle command pulses that automatically return to idle state, ensuring each VR interaction triggers exactly one complete robot movement cycle.
+The pulse-based command architecture replaces continuous signal transmission with discrete 3-cycle command pulses that automatically return to idle state, guaranteeing that each VR interaction triggers exactly one complete robot movement cycle.
 
 \subsection{Command Pulse Structure}
 

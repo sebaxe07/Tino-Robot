@@ -23,7 +23,12 @@ Quality of Service (QoS) policies optimize communication reliability for differe
 
 The integration between software control systems and physical hardware requires sophisticated coordination to handle the disparate timing characteristics of Arduino controllers, ROS2 nodes, and VR systems. The hardware interface node implements thread-based communication management that maintains independent serial connections to three Arduino controllers while coordinating their combined operation through centralized command generation.
 
-[TODO: add system architecture diagram showing ROS2 node graph with hardware interfaces]
+\begin{figure}[H]
+    \centering
+    \includegraphics[height=6cm]{Images/HardwareNodeInteraction.png}
+    \caption{Hardware Interface Node Communication Architecture}
+    \label{fig:hardware_node_interaction}
+\end{figure}
 
 Serial communication reliability employs several integration strategies to ensure robust operation. Persistent device naming through udev rules (\texttt{/dev/ttyBASE}, \texttt{/dev/ttyLEG}, \texttt{/dev/ttyHEAD}) eliminates device enumeration variability that could disrupt system startup. Triple-redundant command transmission at the protocol level ensures message delivery across communication disruptions, while thread-based connection monitoring enables automatic reconnection without affecting other subsystem operations.
 

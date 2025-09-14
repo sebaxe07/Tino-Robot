@@ -8,30 +8,110 @@ The control system addresses three fundamental requirements: (1) guaranteed move
 
 Traditional continuous control architectures suffer from unpredictable interruptions that can leave robots in intermediate states, particularly problematic for social robots where incomplete gestures appear unnatural or confusing to human observers. The atomic movement system addresses this by implementing discrete, completion-guaranteed movements that provide deterministic correspondence between VR user intentions and physical robot actions.
 
-The unified 4-state framework standardizes behavior across both leg and base controllers, enabling sophisticated coordination while maintaining implementation simplicity. Each state represents a complete behavioral phase with well-defined entry and exit conditions:
+The unified 4-state framework standardizes behavior across both leg and base controllers, enabling sophisticated coordination while maintaining implementation simplicity. The design builds upon the legacy Tino system's proven movement patterns, adapting continuous expressive movements into discrete, completion-guaranteed states that provide deterministic correspondence between VR user intentions and physical robot actions.
+
+\subsubsection{Design Rationale Based on Legacy System Experience}
+
+The 4-state architecture emerged from practical experience with the original Tino robot's social interaction capabilities demonstrated by Cardillo~\cite{cardillo2024thesis}. The legacy system demonstrated that specific movement characteristics successfully conveyed intentionality and lifelike behavior during human-robot interaction experiments, particularly the coordinated synchronization between base movement, leg extension patterns, and upper-body tilting that created a unified sense of effort and purposeful motion. The timing parameters and movement patterns implemented in Tino V2 preserve these successful interaction dynamics while restructuring them into atomic operations suitable for VR teleoperation.
+
+The discrete state approach addresses three critical requirements identified from the legacy system's operation: \textbf{predictable movement completion} to prevent the incomplete gestures that compromised social presence in continuous control scenarios, \textbf{coordinated multi-actuator behavior} that creates coherent robot expressions rather than separate mechanical operations, and \textbf{reliable VR command processing} that maintains responsiveness without command accumulation or timing conflicts.
 
 \subsubsection{State 0: Neutral Positioning and System Ready}
-The idle state maintains system readiness while implementing intelligent auto-positioning for the leg controller. Absolute encoder feedback calculates position differences from neutral (0 ticks), applying corrective motor commands with speed optimization: 110 RPM forward for negative positions, 70 RPM backward for positive positions, and 90 RPM neutral speed within a 50-tick tolerance zone. The base controller implements complete motion cessation with comprehensive flag reset, ensuring clean state transitions.
+The idle state maintains system readiness while implementing intelligent auto-positioning for the leg controller. The differentiated RPM values (110 forward, 70 backward, 90 neutral) are derived from empirical testing of the Tino V2 system to optimize the motor characteristics for social interaction, where forward extensions appear more deliberate while return movements exhibit gentler characteristics, building upon the movement principles established in the original Tino's expressive capabilities. The 50-tick tolerance zone accommodates normal system vibration while preventing micro-adjustments that would appear nervous or uncertain. The base controller implements complete motion cessation with comprehensive flag reset, ensuring clean state transitions that provide clear visual cues for state changes.
 
 \subsubsection{State 1: Expressive Attention Behaviors}
-Attention-getting movements provide non-verbal communication capabilities essential for social interaction. The leg controller executes an optimized 3-phase sequence through \texttt{vtLittlePush()}: 50\% forward extension, 5\% pause for emphasis, followed by 45\% return over 1.2 seconds total duration. The base controller implements subtle directional indication through a carefully timed sequence: 600ms preparation delay, 200ms forward motion, 200ms backward return, creating a "nudging" behavior that draws attention without displacing the robot's position.
+Attention-getting movements provide non-verbal communication capabilities essential for social interaction. The 3-phase timing (50\%--5\%--45\% over 1.2 seconds) implements a new ``little push'' movement developed for Tino V2 that incorporates the attention-capture principles demonstrated in the original Tino's social interaction experiments. The brief 5\% pause creates anticipation and draws human attention more effectively than continuous motion, following the expressive movement patterns that proved successful in the legacy system's collaborative tasks. The base controller's ``nudging'' behavior (600ms preparation, 200ms forward, 200ms return) creates a subtle forward lean that maintains spatial positioning while conveying directional intent, preserving the deliberate movement characteristics that facilitated successful human-robot communication in the original experiments.
 
 \subsubsection{State 2: Coordination Preparation}
-Multi-component movement coordination requires temporal synchronization to create coherent robot behaviors. The leg controller extends to maximum reach via \texttt{vtForwardOnly()}, then activates position hold mode using PID control (Kp=2.0, Ki=0.1, Kd=0.5) to maintain extended position during base movement. The base controller implements a 1.5-second timing cycle with sophisticated command queuing, where received state 3 commands are buffered until the coordination phase completes, ensuring perfect synchronization.
+Multi-component movement coordination requires temporal synchronization to create coherent robot behaviors that appear as unified intentions rather than separate mechanical operations. The leg controller's maximum extension followed by PID hold (Kp=2.0, Ki=0.1, Kd=0.5) creates visual preparation that signals impending coordinated movement, building upon the synchronized base-leg movements that successfully conveyed effort and intentionality in the original Tino system~\cite{cardillo2024thesis}. The base controller's 1.5-second timing cycle provides sufficient coordination time while maintaining the perception of responsive control, optimized for the discrete state system while preserving the coordinated movement principles established in the legacy experiments.
 
 \subsubsection{State 3: Coordinated Movement Execution}
-The final phase executes completion-guaranteed operations with multiple movement options. The leg controller returns to neutral using home button detection as the completion criterion, providing tactile feedback for precise positioning. The base controller offers three distinct movement types: forward locomotion (angular=0), right rotation (angular=1), and left rotation (angular=-1), each with carefully calibrated 1.7-second duration for consistent movement magnitudes.
+The final phase executes completion-guaranteed operations with movement parameters that preserve the social interaction effectiveness demonstrated in the original Tino experiments~\cite{cardillo2024thesis}. The leg controller's return to neutral using tactile feedback (home button detection) provides the precise positioning essential for movement completion while maintaining the controlled motion characteristics that created successful human-robot interaction in collaborative scenarios. The 1.7-second base movement duration preserves the deliberate, effortful movement quality that proved effective for conveying intentionality in social scenarios, as demonstrated in the legacy system's experimental validation. The three angular movement options (forward=0, right=1, left=-1) provide sufficient directional capability while maintaining simple cognitive mapping for VR operators, based on the movement vocabulary that successfully supported collaborative tasks in the original experiments.
 
-The implementation leverages absolute encoder positioning with direction-specific scaling factors (forward 1.15, backward 0.85) to compensate for mechanical asymmetries, while automatic position reset on button press provides reliable zero-point calibration. The base controller's \texttt{updateBaseMovementByTime()} function implements millisecond-precision timing with sophisticated locking mechanisms (\texttt{isCase2Locked}) that prevent state conflicts and ensure atomic operation completion.
+\subsubsection{Legacy-to-VR Adaptation Rationale}
+
+The transition from the legacy system's continuous, manually-controlled movements to Tino V2's discrete atomic states preserves the essential movement characteristics that proved successful for social interaction while adapting them for VR teleoperation requirements. The original system's effective movement patterns---including the ``dragging'' leg motion, coordinated upper-body tilting, and deliberate timing that fostered empathy and trust in human-robot interaction scenarios~\cite{cardillo2024thesis}---are encapsulated within the 4-state framework to maintain the social presence and expressive capabilities that made the original Tino successful in collaborative tasks.
+
+This adaptation approach ensures that the proven social robotics capabilities are preserved while gaining the benefits of atomic movement completion, VR responsiveness, and systematic coordination that enable advanced teleoperation scenarios. The framework successfully bridges legacy interaction effectiveness with modern control requirements, providing the foundation for natural human-robot interaction through advanced VR integration.
+
+\subsubsection{Technical Implementation Details}
+
+The control system employs two key mechanisms to ensure precise and reliable robot movement. First, the positioning system uses absolute encoders that track exact component positions, similar to how a GPS provides precise location data. However, the robot's mechanical components do not behave identically in all directions due to factors such as friction, weight distribution, and gear backlash. To address this asymmetry, the system applies calibrated scaling factors: forward movements use a multiplier of 1.15 while backward movements use 0.85, effectively compensating for the mechanical differences and ensuring consistent movement distances regardless of direction.
+
+Second, the movement coordination system prevents conflicts between simultaneous operations through a timing-based approach. The base controller's \texttt{updateBaseMovementByTime()} function operates with millisecond precision, using a locking mechanism (\texttt{isCase2Locked}) that functions like a traffic light system. When one movement sequence begins, the lock prevents new commands from interrupting until the current operation completes entirely. This ensures that each movement executes fully and predictably, which is essential for maintaining the robot's social interaction capabilities and preventing the jerky or incomplete movements that would appear unnatural to human observers.
 
 \subsection{Signal Processing: From VR Intent to Robot Command}
 
 VR teleoperation requires robust signal processing to handle the inherent challenges of wireless communication, user input variability, and real-time processing constraints. The system transforms continuous VR inputs into discrete robot commands while maintaining responsiveness and preventing command accumulation that could lead to unpredictable robot behavior.
 
 \subsubsection{Pulse-Based Command Architecture}
-Rather than transmitting continuous signals that could accumulate in network buffers or create timing dependencies, the system implements discrete 3-cycle command pulses that automatically return to idle state. This approach guarantees that each VR interaction triggers exactly one complete robot movement cycle, preventing the command queue overflow and state confusion common in continuous control systems.
 
-Each user action generates three identical command cycles transmitted at 40ms intervals (120ms total duration), designed to exceed typical network latency variations while preventing command accumulation. The 3-cycle repetition ensures reliable delivery across network interruptions, with command validation through parameter consistency checking across all three pulses.
+The communication between VR systems and the robot employs a pulse-based architecture that solves critical problems inherent in continuous control systems. Instead of transmitting signals continuously while buttons are pressed (which could accumulate in network buffers or create timing dependencies), the system implements discrete command pulses that provide guaranteed one-to-one correspondence between user actions and robot movements.
+
+\textbf{The Core Problem}: Traditional continuous control systems suffer from command accumulation when network latency varies or when users hold buttons for extended periods. For example, if a user presses a movement button and network delays cause commands to queue up, the robot might continue executing movements long after the user releases the button, creating unpredictable and potentially dangerous behavior.
+
+\textbf{The Pulse Solution}: Each VR interaction triggers exactly three identical command cycles transmitted automatically, regardless of how long the user holds the input. This approach guarantees that one button press equals one complete robot movement sequence, with automatic return to idle state preventing command accumulation.
+
+\subsubsection{Implementation Details with Concrete Examples}
+
+The pulse architecture operates through a systematic three-phase transmission cycle that can be observed in both the gamepad controller (used for development testing) and the VR interface node. 
+
+\textbf{Gamepad Implementation Example}: When a user presses the X button (corresponding to State 1 - ``little push'' movement), the \texttt{gamepad\_node.py} executes the following sequence:
+
+\begin{verbatim}
+# Button press triggers pulse initiation
+def trigger_leg_command_pulse(self, command):
+    self.leg_command_pulse_target = command  # Set target to 1
+    self.leg_command_pulse_count = 0         # Reset counter
+    self.leg_command = command               # Immediate activation
+
+# Timer callback executes at 25Hz (every 40ms)
+def publish_commands(self):
+    if self.leg_command_pulse_count < 3:     # Send 3 cycles
+        self.leg_command = self.leg_command_pulse_target
+        self.leg_command_pulse_count += 1
+        
+        if self.leg_command_pulse_count >= 3:
+            self.leg_command = 0             # Auto-return to idle
+            self.leg_command_pulse_target = -1
+\end{verbatim}
+
+This produces exactly three ROS2 messages at 40ms intervals (120ms total duration), each containing \texttt{base\_cmd.linear.x = 1.0}, followed by automatic return to \texttt{base\_cmd.linear.x = 0.0} (idle state).
+
+\textbf{VR Interface Implementation}: The VR system uses identical timing through UDP packet processing. When Unity sends a VR command packet, the \texttt{vr\_interface\_node.py} receives a 32-byte binary structure:
+
+\begin{verbatim}
+# Incoming UDP packet format (32 bytes total)
+data = struct.unpack('fffiiffi', received_data)
+# [head_pitch, head_pan, head_tilt, base_state, base_angular, 
+#  audio_volume, audio_orientation, message_order]
+
+# Example: State 2 command with right rotation
+# [0.0, 0.0, 0.0, 2, 1, 75, 0.0, 12345]
+\end{verbatim}
+
+The VR interface processes these commands identically to gamepad pulses, ensuring that VR development accurately represents final system behavior. Unity applications send single command packets when users perform actions, and the ROS2 system automatically generates the three-cycle pulse sequence with guaranteed completion.
+
+\textbf{Timing Coordination with Robot States}: The 120ms pulse duration is specifically designed to coordinate with the robot's atomic movement states. State 2 (coordination preparation) has a 1.5-second duration, during which the pulse system can process multiple incoming commands without conflicts. Commands received during active movements are queued and automatically executed upon completion, maintaining the atomic guarantee while providing responsive user feedback.
+
+\subsubsection{Network Reliability and Message Validation}
+
+The pulse system incorporates sophisticated reliability mechanisms to handle real-world network conditions. Each UDP packet includes a 32-bit message order counter that enables duplicate detection and lost packet monitoring:
+
+\begin{verbatim}
+# Message ordering validation in vr_interface_node.py
+expected_order = (self.last_message_order + 1) % (2**31)
+if message_order != expected_order:
+    if message_order == self.last_message_order:
+        return  # Skip duplicate messages
+    else:
+        self.get_logger().warn(f'Order gap: Expected {expected_order}, 
+                               Received {message_order}')
+\end{verbatim}
+
+The three-cycle repetition provides redundancy against packet loss: if one of the three 40ms transmissions fails due to network interruption, the remaining cycles ensure command delivery. Parameter consistency checking across all three pulses validates command integrity, rejecting corrupted or incomplete transmissions.
+
+This architecture maintains communication reliability while avoiding the overhead of TCP acknowledgments that would introduce unacceptable latency for real-time VR control. The 120ms total duration exceeds typical network latency variations (usually <50ms on local networks) while preventing command accumulation that could compromise movement predictability.
 
 \subsubsection{Input Signal Conditioning}
 VR input processing transforms continuous controller actions into discrete events through rising-edge triggering on button activation, preventing continuous command generation during extended button holds that could overwhelm the robot's movement capabilities. Input debouncing requires 200ms minimum intervals between commands, while the system captures and encodes current VR state (head orientation) at command initiation time, ensuring movement commands reflect the user's spatial context when the action was initiated.
@@ -43,13 +123,35 @@ The identical pulse generation system enables development testing through gamepa
 The VR integration relies on optimized UDP communication between Unity VR applications and the ROS2 control system, designed to minimize latency while maintaining data integrity and providing robust error handling for production use.
 
 \subsubsection{Message Structure and Processing}
-UDP packet processing extracts commands from compact 32-byte binary structures using \texttt{struct.unpack('fffiiffi', data)} format, optimized for minimal bandwidth usage while providing comprehensive control data. Head commands (pitch, pan, tilt) forward directly to robot controllers for immediate response, while base commands (state 0-3, angular -1/0/1) trigger atomic movement execution through the state machine described above.
+UDP packet processing extracts commands from compact 32-byte binary structures using \texttt{struct.unpack('fffiiffi', data)} format, optimized for minimal bandwidth usage while providing comprehensive control data. The packet format consists of three consecutive 32-bit floats for head control (pitch, pan, tilt), two 32-bit integers for base commands (state 0-3, angular direction -1/0/1), two additional fields for audio control (volume as integer, orientation as float), and a final 32-bit integer for message ordering. This structure enables atomic unpacking with deterministic field extraction while maintaining fixed-size packets that simplify buffer management and reduce parsing overhead.
 
-Message ordering employs 32-bit sequence numbers for duplicate detection and lost packet monitoring, with automatic counter reset during VR reconnection events to handle session management gracefully. This approach maintains communication reliability while avoiding the overhead of TCP acknowledgments that would introduce unacceptable latency for real-time control.
+Head commands (pitch, pan, tilt) forward directly to robot controllers for immediate response, while base commands (state 0-3, angular -1/0/1) trigger atomic movement execution through the unified 4-state framework detailed in Section~\ref{sec:control_implementation}. The system implements comprehensive packet validation including exact size verification (32 bytes), structural integrity checking through Python's \texttt{struct.unpack()} exception handling, and range validation for critical parameters such as base state bounds (0-3) and angular direction constraints (-1,0,1).
+
+\subsubsection{Advanced Message Ordering and Validation}
+
+Message ordering employs sophisticated 32-bit sequence numbers that provide comprehensive duplicate detection and lost packet monitoring capabilities essential for reliable VR teleoperation. The system implements a three-tier validation architecture that addresses the unique challenges of UDP communication in real-time robotics applications.
+
+\textbf{Sequence Number Management}: Each incoming UDP packet contains a monotonically increasing 32-bit message order counter that enables precise tracking of communication patterns. The system maintains \texttt{last\_message\_order} state with automatic wraparound handling using modulo arithmetic \texttt{(last\_order + 1) \% (2**31)} to prevent integer overflow while preserving ordering semantics. This approach provides over 2 billion unique sequence numbers before wraparound, sufficient for continuous operation exceeding 24 hours at 25Hz transmission rates.
+
+\textbf{Duplicate Detection Algorithm}: The validation system implements intelligent duplicate filtering by comparing incoming sequence numbers against expected values. When \texttt{message\_order <= last\_message\_order} and the value is positive, the system identifies potential duplicates or out-of-order packets and logs warnings while skipping packet processing to prevent command repetition. This mechanism prevents movement accumulation caused by network-level packet duplication or VR system retransmission attempts.
+
+\textbf{Gap Detection and Loss Monitoring}: Lost packet detection operates through gap analysis where \texttt{message\_order != expected\_order} triggers warning logs that include both expected and received values for diagnostic purposes. The system distinguishes between minor gaps (1-3 missing packets, typically acceptable for real-time control) and major gaps (>10 missing packets, indicating significant network issues) through configurable thresholds. Gap information enables network quality assessment and adaptive control strategies that can adjust transmission rates or implement backup communication protocols during degraded network conditions.
+
+\subsubsection{Comprehensive Communication Health Monitoring}
+
+The system implements multi-layered communication health monitoring that provides continuous assessment of VR-robot communication quality through statistical analysis, rate validation, and connection status tracking. This monitoring architecture enables proactive detection of communication degradation before it impacts robot operation.
+
+\textbf{Rate-Based Health Assessment}: The monitoring system tracks actual versus expected communication rates through configurable parameters including \texttt{expected\_receive\_rate\_hz} (default 25Hz for VR commands), \texttt{pose\_send\_rate\_hz} (default 10Hz for robot pose data), and \texttt{skeleton\_send\_rate\_hz} (default 10Hz for human tracking). The system maintains sliding-window statistics over configurable intervals (default 10 seconds) that calculate actual transmission rates using \texttt{packet\_count / time\_period} calculations. Rate deviations exceeding configurable thresholds (typically 20\% for incoming data, 10\% for outgoing data) trigger graduated warning levels that help distinguish between temporary network fluctuations and systematic communication failures.
+
+\textbf{Connection Status and Timeout Management}: Advanced connection tracking implements sophisticated timeout mechanisms with configurable disconnection thresholds (default 3 seconds) that account for typical network latency variations. The system maintains \texttt{is\_vr\_connected} state through timestamp comparison using \texttt{current\_time - last\_received\_time > disconnection\_timeout} logic. Connection state transitions trigger automatic recovery procedures including message order counter reset (\texttt{last\_message\_order = -1}) for graceful reconnection handling.
+
+\textbf{Adaptive Monitoring and Recovery}: The health monitoring system implements adaptive behavior based on connection history and communication patterns. During stable operation, monitoring logs are generated at configurable intervals (default 10 seconds) with information-level messages confirming normal operation. When communication issues are detected, the system increases logging frequency and detail level while implementing automatic recovery procedures. Upon VR reconnection, the system logs reconnection events, resets sequence counters to handle Unity application restarts gracefully, and provides startup confirmation that enables operators to verify communication restoration.
+
+\textbf{Statistical Analysis and Trend Detection}: The monitoring system maintains comprehensive statistics including total packet counts, rate calculations over multiple time windows, and trend analysis for early detection of degrading communication quality. Metrics include successful packet reception rates, sequence gap frequency, and timing consistency measurements that enable predictive maintenance and network optimization. This statistical foundation supports both real-time operation decisions and long-term system optimization through data-driven communication tuning.
 
 \subsubsection{Performance and Reliability Characteristics}
 The communication system is designed to maintain low latency for real-time VR teleoperation while ensuring atomic movement commands complete reliably even under network stress conditions. The system prioritizes head movement responsiveness to provide immediate visual feedback, while atomic movement commands are optimized for reliable initiation and completion according to their predefined state timings. 
 
-Error recovery mechanisms automatically detect VR disconnection and implement safe robot shutdown procedures, preventing autonomous operation that could pose safety risks.
+Error recovery mechanisms automatically detect VR disconnection and implement safe robot shutdown procedures, preventing autonomous operation that could pose safety risks. The comprehensive monitoring and validation framework provides operators with detailed insight into communication health while maintaining the sub-50ms latency requirements essential for natural VR interaction.
 
 The control architecture successfully bridges the gap between VR user intentions and coordinated robot responses, providing the foundation for natural human-robot interaction through the advanced perception capabilities detailed in Section~\ref{sec:perception_sensing}. The atomic movement system ensures predictable robot behavior essential for social interaction, while the pulse-based communication protocol maintains real-time responsiveness required for effective VR teleoperation.

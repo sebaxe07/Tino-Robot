@@ -56,11 +56,42 @@ Orientation estimation maintains RTABMap quaternion data as the primary source w
 
 \paragraph{Orientation Recovery and Fallback Mechanisms}
 
-During RTABMap orientation loss, the \texttt{\_estimate\_orientation\_from\_movement} method calculates orientation from position history, storing the last 5 position measurements with minimum 5cm movement thresholds. Recovery validation continuously monitors RTABMap orientation data, automatically transitioning back upon detection of valid orientation values while maintaining UWB position data.
+The system implements sophisticated orientation recovery mechanisms to handle RTABMap orientation loss scenarios that commonly occur in feature-poor environments or during rapid robot movements. Orientation loss detection utilizes specific invalid quaternion values (x=1.0, y=0.0, z=0.0, w=0.0) as failure indicators from RTABMap's visual odometry system.
 
-Performance monitoring tracks sensor health, fusion quality, and system reliability through comprehensive statistics on UWB availability, RTABMap orientation validity, and fusion algorithm performance.
+\paragraph{Movement-Based Orientation Estimation}
 
-The resulting hybrid system provides robust localization that maintains the accuracy advantages of UWB positioning while preserving the orientation capabilities of visual SLAM, establishing the foundation for precise human detection and interaction positioning described in the following subsection.
+Upon detecting orientation loss, the \texttt{\_estimate\_orientation\_from\_movement} method activates a movement-based orientation recovery algorithm that reconstructs robot heading from position trajectory analysis. The algorithm maintains a configurable position history buffer (default 5 positions) storing recent UWB position measurements with temporal validation ensuring minimum 5cm movement thresholds between consecutive measurements to avoid noise-induced false orientation estimates.
+
+The orientation calculation employs vector analysis of the most recent position displacement:
+\begin{align}
+\Delta x &= x_{current} - x_{previous} \\
+\Delta y &= y_{current} - y_{previous} \\
+\text{yaw} &= \arctan2(\Delta y, \Delta x)
+\end{align}
+
+Movement magnitude validation prevents orientation estimation from small positional noise by requiring displacement magnitude $\sqrt{\Delta x^2 + \Delta y^2} \geq 0.05$ meters. The calculated yaw angle converts to quaternion representation for ROS2 compatibility using standard rotation matrix transformations around the Z-axis:
+\begin{align}
+q_x &= 0.0 \\
+q_y &= 0.0 \\
+q_z &= \sin(\text{yaw}/2) \\
+q_w &= \cos(\text{yaw}/2)
+\end{align}
+
+\paragraph{Multi-Layer Orientation Fallback Strategy}
+
+The orientation selection hierarchy implements three prioritized fallback levels ensuring continuous operation during various failure scenarios. Primary orientation source utilizes live RTABMap quaternion data when valid, providing high-frequency orientation updates with sub-degree accuracy from visual-inertial odometry. Secondary fallback activates movement-based estimation during RTABMap failures, calculating orientation from UWB position displacement vectors with update rates limited by robot movement speed and position measurement frequency.
+
+Tertiary fallback maintains the last valid RTABMap orientation when insufficient movement data exists for estimation, preserving orientation continuity during stationary periods or initialization phases. Ultimate fallback defaults to identity quaternion (0,0,0,1) representing zero rotation when no orientation data is available, ensuring system operation continuity with known heading reference.
+
+\paragraph{Automatic Recovery and Validation}
+
+RTABMap orientation recovery monitoring continuously validates incoming orientation data using the \texttt{\_is\_orientation\_valid} method, detecting transitions from invalid to valid quaternion values indicating successful visual tracking reacquisition. Recovery validation triggers automatic switching from movement-based estimation back to RTABMap orientation data, maintaining position tracking continuity through UWB positioning while restoring full 6-DOF pose estimation capability.
+
+The system implements automatic odometry reset functionality through the \texttt{/reset\_odom} service call upon detecting orientation loss, triggering RTABMap's internal relocalization algorithms while maintaining global position reference through UWB data. Service call validation ensures successful odometry reset confirmation before proceeding with orientation recovery procedures.
+
+Performance monitoring tracks sensor health through comprehensive statistics including UWB position availability percentages, RTABMap orientation validity metrics, movement-based estimation activation frequency, and fusion algorithm performance indicators. Diagnostic logging provides detailed recovery event tracking with timestamp correlation enabling post-analysis of orientation loss patterns and recovery effectiveness.
+
+The multi-layered orientation recovery system ensures robust operation in challenging environments where traditional visual SLAM systems typically fail, maintaining navigation capability during extended visual tracking loss while preserving the precision advantages of hybrid UWB-visual positioning for accurate human detection and interaction positioning described in the following subsection.
 
 
 
@@ -88,9 +119,11 @@ The \texttt{pose\_detection\_node.py} integrates seamlessly with Tino's ROS2 arc
 
 \paragraph{Camera Integration and Preprocessing}
 
-The node subscribes to Oak-D Pro topics \texttt{/right/image\_rect} for monocular RGB input and \texttt{/stereo/depth} for corresponding depth information required for 3D coordinate calculation. Image preprocessing includes monocular to BGR conversion for YOLO compatibility using CPU-based OpenCV operations while maintaining real-time performance through efficient memory management.
+The node subscribes to Oak-D Pro topics \texttt{/right/image\_rect} for monocular grayscale input and \texttt{/stereo/depth} for corresponding depth information required for 3D coordinate calculation. Image preprocessing includes grayscale to BGR conversion for YOLO compatibility using CPU-based OpenCV operations while maintaining real-time performance through efficient memory management.
 
-Synchronization mechanisms maintain temporal alignment between RGB and depth streams through callback-based processing with \texttt{latest\_image} and \texttt{latest\_depth\_image} synchronization, ensuring corresponding depth information availability for each processed RGB frame.
+The BGR format selection stems from OpenCV's historical design choice, which differs from the conventional RGB ordering used in many computer graphics applications. OpenCV internally represents color images in BGR (Blue-Green-Red) channel order, reflecting its origins in computer vision applications where this ordering provided computational advantages on certain hardware architectures. Since YOLO models are typically trained and optimized using OpenCV preprocessing pipelines, maintaining BGR format throughout the processing chain eliminates unnecessary color channel reordering operations that would introduce computational overhead and potential data copying. The \texttt{cv2.COLOR\_GRAY2BGR} conversion replicates the single grayscale channel across all three BGR channels, creating a pseudo-color image that maintains compatibility with YOLO's three-channel input requirements while preserving the original intensity information.
+
+Synchronization mechanisms maintain temporal alignment between grayscale and depth streams through callback-based processing with \texttt{latest\_image} and \texttt{latest\_depth\_image} synchronization, ensuring corresponding depth information availability for each processed frame.
 
 \paragraph{TensorRT Inference and Result Processing}
 

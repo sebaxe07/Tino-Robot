@@ -1,0 +1,55 @@
+\section{Control Architecture: From Perception to Physical Response}
+\label{sec:control_implementation}
+Real-time VR teleoperation demands precise translation of user intentions into robot movements while maintaining spatial awareness and natural social behaviors. The challenge extends beyond simple command forwarding: the system must coordinate multiple actuators, ensure movement completion, handle network uncertainties, and maintain synchronization between leg expressions and base locomotion. This section details the control implementation that transforms perception inputs (from Section~\ref{sec:perception_sensing}) into coordinated physical responses through the hardware interfaces described in Section~\ref{sec:hardware_impl}.
+
+The control system addresses three fundamental requirements: (1) guaranteed movement completion to prevent incomplete gestures that compromise social interaction, (2) temporal coordination between multiple actuators to create coherent robot behaviors, and (3) robust VR communication that handles network latency and packet loss without degrading user experience.
+
+\subsection{Atomic Movement Framework: Ensuring Predictable Robot Behavior}
+
+Traditional continuous control architectures suffer from unpredictable interruptions that can leave robots in intermediate states, particularly problematic for social robots where incomplete gestures appear unnatural or confusing to human observers. The atomic movement system addresses this by implementing discrete, completion-guaranteed movements that provide deterministic correspondence between VR user intentions and physical robot actions.
+
+The unified 4-state framework standardizes behavior across both leg and base controllers, enabling sophisticated coordination while maintaining implementation simplicity. Each state represents a complete behavioral phase with well-defined entry and exit conditions:
+
+\subsubsection{State 0: Neutral Positioning and System Ready}
+The idle state maintains system readiness while implementing intelligent auto-positioning for the leg controller. Absolute encoder feedback calculates position differences from neutral (0 ticks), applying corrective motor commands with speed optimization: 110 RPM forward for negative positions, 70 RPM backward for positive positions, and 90 RPM neutral speed within a 50-tick tolerance zone. The base controller implements complete motion cessation with comprehensive flag reset, ensuring clean state transitions.
+
+\subsubsection{State 1: Expressive Attention Behaviors}
+Attention-getting movements provide non-verbal communication capabilities essential for social interaction. The leg controller executes an optimized 3-phase sequence through \texttt{vtLittlePush()}: 50\% forward extension, 5\% pause for emphasis, followed by 45\% return over 1.2 seconds total duration. The base controller implements subtle directional indication through a carefully timed sequence: 600ms preparation delay, 200ms forward motion, 200ms backward return, creating a "nudging" behavior that draws attention without displacing the robot's position.
+
+\subsubsection{State 2: Coordination Preparation}
+Multi-component movement coordination requires temporal synchronization to create coherent robot behaviors. The leg controller extends to maximum reach via \texttt{vtForwardOnly()}, then activates position hold mode using PID control (Kp=2.0, Ki=0.1, Kd=0.5) to maintain extended position during base movement. The base controller implements a 1.5-second timing cycle with sophisticated command queuing, where received state 3 commands are buffered until the coordination phase completes, ensuring perfect synchronization.
+
+\subsubsection{State 3: Coordinated Movement Execution}
+The final phase executes completion-guaranteed operations with multiple movement options. The leg controller returns to neutral using home button detection as the completion criterion, providing tactile feedback for precise positioning. The base controller offers three distinct movement types: forward locomotion (angular=0), right rotation (angular=1), and left rotation (angular=-1), each with carefully calibrated 1.7-second duration for consistent movement magnitudes.
+
+The implementation leverages absolute encoder positioning with direction-specific scaling factors (forward 1.15, backward 0.85) to compensate for mechanical asymmetries, while automatic position reset on button press provides reliable zero-point calibration. The base controller's \texttt{updateBaseMovementByTime()} function implements millisecond-precision timing with sophisticated locking mechanisms (\texttt{isCase2Locked}) that prevent state conflicts and ensure atomic operation completion.
+
+\subsection{Signal Processing: From VR Intent to Robot Command}
+
+VR teleoperation requires robust signal processing to handle the inherent challenges of wireless communication, user input variability, and real-time processing constraints. The system transforms continuous VR inputs into discrete robot commands while maintaining responsiveness and preventing command accumulation that could lead to unpredictable robot behavior.
+
+\subsubsection{Pulse-Based Command Architecture}
+Rather than transmitting continuous signals that could accumulate in network buffers or create timing dependencies, the system implements discrete 3-cycle command pulses that automatically return to idle state. This approach guarantees that each VR interaction triggers exactly one complete robot movement cycle, preventing the command queue overflow and state confusion common in continuous control systems.
+
+Each user action generates three identical command cycles transmitted at 40ms intervals (120ms total duration), designed to exceed typical network latency variations while preventing command accumulation. The 3-cycle repetition ensures reliable delivery across network interruptions, with command validation through parameter consistency checking across all three pulses.
+
+\subsubsection{Input Signal Conditioning}
+VR input processing transforms continuous controller actions into discrete events through rising-edge triggering on button activation, preventing continuous command generation during extended button holds that could overwhelm the robot's movement capabilities. Input debouncing requires 200ms minimum intervals between commands, while the system captures and encodes current VR state (head orientation) at command initiation time, ensuring movement commands reflect the user's spatial context when the action was initiated.
+
+The identical pulse generation system enables development testing through gamepad control that accurately represents VR operational behavior. Gamepad button mapping follows VR command structure: face buttons control leg states (X→state 1, Y→state 2, B→state 3, A→idle), while shoulder buttons enable combined movement testing with simultaneous angular direction commands.
+
+\subsection{Unity-ROS2 Communication Protocol}
+
+The VR integration relies on optimized UDP communication between Unity VR applications and the ROS2 control system, designed to minimize latency while maintaining data integrity and providing robust error handling for production use.
+
+\subsubsection{Message Structure and Processing}
+UDP packet processing extracts commands from compact 32-byte binary structures using \texttt{struct.unpack('fffiiffi', data)} format, optimized for minimal bandwidth usage while providing comprehensive control data. Head commands (pitch, pan, tilt) forward directly to robot controllers for immediate response, while base commands (state 0-3, angular -1/0/1) trigger atomic movement execution through the state machine described above.
+
+Message ordering employs 32-bit sequence numbers for duplicate detection and lost packet monitoring, with automatic counter reset during VR reconnection events to handle session management gracefully. This approach maintains communication reliability while avoiding the overhead of TCP acknowledgments that would introduce unacceptable latency for real-time control.
+
+\subsubsection{Performance and Reliability Characteristics}
+The communication system is designed to maintain low latency for real-time VR teleoperation while ensuring atomic movement commands complete reliably even under network stress conditions. The system prioritizes head movement responsiveness to provide immediate visual feedback, while atomic movement commands are optimized for reliable initiation and completion according to their predefined state timings. 
+
+Error recovery mechanisms automatically detect VR disconnection and implement safe robot shutdown procedures, preventing autonomous operation that could pose safety risks.
+
+The control architecture successfully bridges the gap between VR user intentions and coordinated robot responses, providing the foundation for natural human-robot interaction through the advanced perception capabilities detailed in Section~\ref{sec:perception_sensing}. The atomic movement system ensures predictable robot behavior essential for social interaction, while the pulse-based communication protocol maintains real-time responsiveness required for effective VR teleoperation.

@@ -1,0 +1,57 @@
+This thesis has presented the comprehensive development and evaluation of Tino V2, a VR-enabled social robotics platform that represents a significant advancement over its predecessor through the integration of modern computational architectures, advanced sensing capabilities, and immersive teleoperation interfaces. The work demonstrates how the convergence of robotics, computer vision, and virtual reality technologies can create new paradigms for human-robot interaction research while addressing practical challenges in social robotics implementation.
+
+\section{Key Achievements and Contributions}
+
+The development of Tino V2 has successfully transformed a limited legacy system into a sophisticated research platform capable of supporting advanced social robotics investigations through VR-mediated interaction.
+
+\subsection{Technical Achievements}
+
+\textbf{Computational Platform and Architecture}: The migration from Raspberry Pi to NVIDIA Orin Nano with distributed ROS2 architecture enabled real-time processing of multiple AI workloads simultaneously. This foundation supports concurrent SLAM, human pose estimation, sensor fusion, and VR communication while maintaining responsive performance (93.2\% system uptime, <3s response times).
+
+\textbf{Hybrid Localization System}: The integration of UWB absolute positioning with RTABMap visual SLAM achieved a 4.7x improvement in positioning accuracy, reducing maximum errors from over 69cm to under 15cm. This hybrid approach successfully balances the precision required for VR spatial correspondence with the robustness necessary for sustained operation in dynamic environments.
+
+\textbf{Real-Time Human Perception}: The YOLOv11-based pose estimation system provides 3D skeletal tracking with 97.2\% detection rates and sub-24ms processing latency. The integration with stereo depth enables accurate 3D joint positioning essential for VR representation of human participants during collaborative scenarios.
+
+\textbf{VR Integration Framework}: The bidirectional ROS2-Unity communication system achieved 98\% command success rates across all movement types. The atomic movement framework successfully translates VR input into predictable, completion-guaranteed robot behaviors while preserving the expressiveness necessary for social interaction.
+
+\subsection{Research and Methodological Contributions}
+
+\textbf{VR-Mediated Social Robotics Paradigm}: This work demonstrates that carefully designed VR teleoperation can preserve and enhance expressive movement capabilities essential for social robotics. The successful preservation of non-verbal communication through robot embodiment validates immersive teleoperation as a viable research paradigm for investigating human-robot interaction.
+
+\textbf{Comprehensive Evaluation Framework}: The three-room collaborative experiment design provides a reusable methodology for assessing both technical system performance and social interaction capabilities simultaneously. The progressive challenge structure effectively exercises all system components under realistic operational conditions.
+
+\textbf{Technology Selection Methodology}: The systematic evaluation of SLAM technologies (ORB-SLAM3, SVO, RTABMap), cameras, and perception systems provides practical guidance for robotics research projects, demonstrating how academic performance benchmarks must be balanced against implementation complexity and operational reliability.
+
+\section{Limitations and Future Directions}
+
+\subsection{Current Limitations}
+
+Several technical and operational challenges limit the system's immediate deployment capabilities:
+
+\textbf{Manual Calibration Requirements}: Coordinate frame alignment between SLAM and VR environments requires manual calculation (11.5° offset in evaluation setup), limiting seamless multi-environment operation. Environmental mapping demands feature enhancement and 1.5-hour setup procedures.
+
+\textbf{Hardware Durability}: Plastic wheel hub failures under 20kg operational load and 3D-printed component vulnerabilities highlight the need for robust material selection. Fabric interaction with wheels and camera occlusion require ongoing manual intervention.
+
+\textbf{Perception Constraints}: Human detection degrades to 89.3\% under poor lighting, sideways orientation creates pose confusion, and detailed hand gesture recognition remains unavailable. Audio communication suffers from excessive self-noise sensitivity.
+
+\textbf{Movement Speed Trade-offs}: The 1.7-second atomic movement duration ensures reliability but creates speed limitations that some users found restrictive during complex navigation tasks.
+
+\subsection{Future Research Opportunities}
+
+\textbf{Immediate Technical Improvements}: Automated coordinate frame alignment through landmark detection, active noise cancellation for audio systems, robust mechanical design with metal components, and automated battery monitoring represent clear enhancement pathways.
+
+\textbf{Advanced Capabilities}: Multi-human social interaction scenarios leveraging existing pose detection capabilities, enhanced gesture recognition through dedicated hand tracking, dynamic environment adaptation, and predictive movement planning could significantly expand research applications.
+
+\textbf{Research Applications}: The platform enables longitudinal studies of human-robot relationship development, cross-cultural interaction investigations, accessibility and assistive technology applications, and telepresence research across distributed participants.
+
+\textbf{Technology Integration}: AI enhancement through language models, haptic feedback for enhanced embodiment, mixed reality interfaces, and cloud computing integration represent promising directions for expanding system capabilities.
+
+\section{Concluding Remarks}
+
+Tino V2 successfully demonstrates that VR-enabled social robotics can preserve expressive interaction capabilities while providing researchers with powerful tools for investigating fundamental questions in human-robot interaction. The quantitative validation—98\% command success, <15cm positioning accuracy, 97\% human detection, 93\% uptime—confirms technical viability for demanding research applications.
+
+The modular, well-documented architecture provides a reusable foundation for diverse social robotics applications, while the comprehensive evaluation methodology offers practical guidance for future VR-robotics development. The success of VR operators in developing effective non-verbal communication protocols validates the fundamental research hypothesis that immersive teleoperation can maintain social qualities essential for meaningful human-robot interaction.
+
+This work contributes to the growing understanding that the convergence of robotics, AI, and immersive technologies creates new possibilities for human-robot interaction that transcend individual technology limitations. By demonstrating preservation of expressive social capabilities through VR mediation while providing enhanced spatial awareness and operational flexibility, Tino V2 validates immersive teleoperation as a foundation for future human-robot collaboration paradigms that enhance rather than replace human social capabilities.
+
+The identified challenges represent typical engineering problems rather than fundamental limitations, providing clear directions for continued advancement. As social robotics evolves toward practical applications in healthcare, education, and human assistance, the VR teleoperation capabilities demonstrated here provide a foundation for systems that leverage human social intelligence while extending physical presence and interaction capabilities across distances and environments.

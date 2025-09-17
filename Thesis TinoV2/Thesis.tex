@@ -135,7 +135,7 @@
 \frontmatter % Use roman page numbering style (i, ii, iii, iv...) for the preamble pages
 
 \puttitle{
-	title={Tino V2, the revenge of the maze (Temporal Title)}, % Title of the thesis
+	title={VR-Enabled Social Robotics: Development and Evaluation of an Immersive Teleoperation Platform for Human-Robot Interaction}, % Title of the thesis
 	name=Sebastian Enrique Perea Lopez, % Author Name and Surname
 	course=Computer Science and Engineering \\Ingegneria Informatica, % Study Programme (in Italian)
 	ID  =  10986638,  % Student ID number (numero di matricola)
@@ -152,7 +152,7 @@
 \pagestyle{empty}
 \hspace{0pt}
 \vfill
-\textit{Dedicated to my family.}
+\textit{Dedicado a mi familia.}
 \vfill
 \hspace{0pt}
 \pagebreak
@@ -162,17 +162,27 @@
 
 % ABSTRACT IN ENGLISH
 \chapter*{Abstract} 
-Here goes the abstract.
+This thesis presents the development of Tino V2, a social robotics platform designed for immersive Virtual Reality (VR) teleoperation while preserving the expressive movement capabilities required for natural human-robot interaction. Building upon the limitations of a legacy Raspberry Pi-based system, Tino V2 introduces a modern distributed architecture that integrates advanced sensing and real-time AI processing.
+
+The system combines Ultra-Wideband (UWB) positioning with RTABMap visual SLAM to achieve a 4.7× improvement in localization accuracy, while real-time human perception is enabled through a YOLOv11-based 3D pose estimation pipeline operating at sub-24 ms latency. A ROS2–Unity communication framework supports natural VR-based robot control with 98\% command reliability, while distributed execution on NVIDIA Orin Nano enables concurrent SLAM, perception, and sensor fusion processes with 93\% uptime.
+
+Evaluation with twelve participants in collaborative maze scenarios demonstrated that immersive VR control allows effective spatial coordination, non-verbal communication, and problem-solving, confirming that teleoperation can sustain the social qualities essential for meaningful human-robot interaction.
+
+This work contributes novel methods for hybrid localization, VR-optimized movement primitives, and a comprehensive framework for evaluating VR-mediated social interaction. Results establish immersive teleoperation as a viable paradigm for social robotics research, laying the groundwork for future studies in telepresence, empathy transfer, and distributed collaboration.\\
 \\
-\\
-\textbf{Keywords:} key, words, go, here% Keywords
+\textbf{Keywords:} social robotics, virtual reality teleoperation, human-robot interaction, SLAM, pose estimation, sensor fusion, ROS2% Keywords
 
 % ABSTRACT IN ITALIAN
 \chapter*{Abstract in lingua italiana}
-Qui va inserito l'abstract in italiano.
+Questa tesi presenta lo sviluppo di Tino V2, una piattaforma di robotica sociale progettata per la teleoperazione immersiva in Realtà Virtuale (VR) mantenendo le capacità di movimento espressive necessarie per un'interazione naturale uomo-robot. Basandosi sulle limitazioni di un sistema legacy basato su Raspberry Pi, Tino V2 introduce un'architettura distribuita moderna che integra sensori avanzati e elaborazione AI in tempo reale.
+
+Il sistema combina il posizionamento Ultra-Wideband (UWB) con RTABMap visual SLAM per ottenere un miglioramento di 4,7× nella precisione di localizzazione, mentre la percezione umana in tempo reale è abilitata attraverso un pipeline di stima della posa 3D basata su YOLOv11 che opera con una latenza inferiore a 24 ms. Un framework di comunicazione ROS2–Unity supporta il controllo naturale del robot basato su VR con una affidabilità del comando del 98\%, mentre l'esecuzione distribuita su NVIDIA Orin Nano consente processi simultanei di SLAM, percezione e fusione dei sensori con un uptime del 93\%.
+
+La valutazione con dodici partecipanti in scenari collaborativi di labirinti ha dimostrato che il controllo immersivo in VR consente una coordinazione spaziale efficace, comunicazione non verbale e problem-solving, confermando che la teleoperazione può sostenere le qualità sociali essenziali per un'interazione significativa uomo-robot.
+
+Questo lavoro contribuisce con metodi innovativi per la localizzazione ibrida, primitive di movimento ottimizzate per la VR e un framework completo per la valutazione dell'interazione sociale mediata dalla VR. I risultati stabiliscono la teleoperazione immersiva come un paradigma praticabile per la ricerca sulla robotica sociale, ponendo le basi per futuri studi sulla telepresenza, il trasferimento di empatia e la collaborazione distribuita.\\
 \\
-\\
-\textbf{Parole chiave:} qui, vanno, le, parole, chiave% Keywords (italian)
+\textbf{Parole chiave:} robotica sociale, teleoperazione in realtà virtuale, interazione uomo-robot, SLAM, stima della posa, fusione dei sensori, ROS2% Keywords (italian)
 
 %----------------------------------------------------------------------------
 %	LIST OF CONTENTS/FIGURES/TABLES/SYMBOLS
@@ -232,7 +242,7 @@ Qui va inserito l'abstract in italiano.
 
 
 % Chapter 5: Evaluation
-\chapter{Evaluation}
+\chapter{System Evaluation and Validation}
 \input{Chapters/evaluation}
 
 % Chapter 6: Conclusions
@@ -256,7 +266,6 @@ Qui va inserito l'abstract in italiano.
 %	APPENDICES
 %-------------------------------------------------------------------------
 
-\cleardoublepage
 \addtocontents{toc}{\vspace{2em}} % Add a gap in the Contents, for aesthetics
 % \appendix
 % \chapter{Appendix A}
@@ -288,7 +297,22 @@ Qui va inserito l'abstract in italiano.
 
 % ACKNOWLEDGEMENTS
 \chapter*{Acknowledgements}
-Here you may want to acknowledge someone.
+
+This thesis represents not just my individual effort, but the culmination of support, guidance, and collaboration from many wonderful people who have made this journey possible and meaningful.
+
+First and foremost, I extend my deepest gratitude to Professor Andrea Bonarini, whose guidance, wisdom, and patience have been instrumental throughout this entire process. His passion for robotics and human-robot interaction has been truly inspiring, and his mentorship has shaped not only this work but also my perspective as a researcher. I am equally grateful to Federico Espositi, whose technical expertise, insightful feedback, and continuous support have been invaluable in navigating the complex challenges of this project.
+
+To the entire AIRLab community—thank you for creating such a stimulating and collaborative environment where learning and innovation flourish. The knowledge I gained, the discussions we shared, and the friendships formed within these walls have enriched both my research and my personal growth in ways I could never have imagined.
+
+A special acknowledgment goes to Alessandro, whose brilliant work on the VR development made it possible to bridge two entirely different worlds—the physical and the virtual. Without his dedication and technical prowess, the core vision of this thesis could never have been realized. Our collaboration demonstrated the true power of interdisciplinary teamwork.
+
+To my parents, Alexandra and Jorge—words cannot express how grateful I am for your unwavering love and support. Despite the 7-hour time difference that separated us, you were always there for me during the most challenging moments of this journey. Your sacrifices, encouragement, and belief in me have been the foundation upon which all my achievements rest. Without your tireless efforts and dedication throughout my life, I would never have reached this milestone.
+
+To my incredible friends Nicole, Daniel, and Camilo—thank you for your patience, humor, and enthusiasm during this adventure. You not only helped me test Tino through countless experiments but also witnessed me doing some truly crazy things during development (and somehow still remained my friends!). Your friendship, laughter, and willingness to be part of this research made even the most stressful moments enjoyable and memorable.
+
+Finally, I want to acknowledge everyone who contributed to this work in both big and small ways—from technical discussions to moral support, from debugging sessions to celebration moments. This thesis is as much yours as it is mine.
+
+Thank you all for being part of this incredible journey.
 
 \cleardoublepage
 

@@ -151,7 +151,7 @@ Failure modes: low confidence joints (reported but flagged), missing depth (use 
 To improve modularity and maintainability the entire robot stack was migrated to ROS2. The project uses a node-based split that mirrors the functional decomposition:
 
 \begin{itemize}
-	\item \textbf{Perception:} \texttt{rtabmap} (mapping/localization), \texttt{depthai} camera node, \texttt{yolo11\_pose\_node} (TensorRT inference + skeleton extraction).
+	\item \textbf{Perception:} \texttt{rtabmap} (mapping/localization), \texttt{depthai} camera node, \linebreak\texttt{yolo11\_pose\_node} (TensorRT inference + skeleton extraction).
 	\item \textbf{State and logging:} \texttt{vr\_data\_recorder\_node} (logging for VR and experiments).
 	\item \textbf{Control (includes fusion):} \texttt{robot\_controller\_node.py} implements simple sensor selection logic (UWB preferred for position, RTABMap for orientation) and high-level behaviours; \texttt{hardware\_interface\_node.py} handles serial comms to Arduinos using device symlinks \texttt{/dev/ttyHEAD}, \texttt{/dev/ttyBASE}, \texttt{/dev/ttyLEG}.
 	\item \textbf{I/O and integration:} \texttt{gamepad\_node.py}, \texttt{audio\_node.py}, \texttt{vr\_interface\_node.py} (VR bridge and topic translation).

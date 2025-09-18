@@ -34,7 +34,7 @@ Serial communication reliability employs several integration strategies to ensur
 
 The atomic movement coordination system demonstrates sophisticated integration between software control logic and hardware execution timing. State transitions must coordinate between leg extensions (requiring encoder feedback) and base movements (using timer-based control) while handling the different response characteristics of each subsystem. The integration ensures that compound movements like ``extend leg, move base, retract leg'' execute as atomic operations despite involving multiple physical controllers with independent timing requirements.
 
-Command format standardization through the key-value protocol (\texttt{BF=value,BB=value,HP=value,HX=value,HY=value}) enables unified control message generation while accommodating the different parameter requirements of each controller. This integration approach maintains backward compatibility with existing Arduino firmware while enabling sophisticated coordination through the ROS2 layer.
+Command format standardization through the key-value protocol (\texttt{BF=value,BB=value,}\linebreak\texttt{HP=value,HX=value,HY=value}) enables unified control message generation while accommodating the different parameter requirements of each controller. This integration approach maintains backward compatibility with existing Arduino firmware while enabling sophisticated coordination through the ROS2 layer.
 
 \subsection{Perception-Control Integration}
 

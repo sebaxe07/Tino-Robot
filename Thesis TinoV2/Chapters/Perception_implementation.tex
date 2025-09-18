@@ -17,9 +17,9 @@ The four-node RTABMap architecture includes \texttt{rgbd\_sync} for temporal ali
 
 \paragraph{Dual-Mode Operation}
 
-The system supports both mapping and localization modes through dedicated launch configurations. Mapping mode (\texttt{rtab\_mapping.launch.py}) enables full SLAM functionality with parameters \texttt{subscribe\_rgbd: True}, \texttt{subscribe\_odom\_info: True}, \texttt{approx\_sync: False} for precise temporal alignment, and \texttt{wait\_imu\_to\_init: True} for proper IMU initialization. The mapping process maintains visual landmarks and occupancy grid information in the \texttt{\textasciitilde/rtabmap.db} database for future relocalization.
+The system supports both mapping and localization modes through dedicated launch configurations. Mapping mode (\texttt{rtab\_mapping.launch.py}) enables full SLAM functionality with parameters \texttt{subscribe\_rgbd: True}, \linebreak\texttt{subscribe\_odom\_info: True}, \texttt{approx\_sync: False} for precise temporal alignment, and \texttt{wait\_imu\_to\_init: True} for proper IMU initialization. The mapping process maintains visual landmarks and occupancy grid information in the \texttt{\textasciitilde/rtabmap.db} database for future relocalization.
 
-Localization mode (\texttt{rtab\_localization.launch.py}) loads existing maps with \texttt{localization: True} and \texttt{Mem/IncrementalMemory: False} to prevent map modifications. The \texttt{Rtabmap/DetectionRate: 3.0} parameter optimizes loop closure detection frequency, balancing computational load against relocalization performance for operation in known environments.
+Localization mode (\texttt{rtab\_localization.launch.py}) loads existing maps with \linebreak\texttt{localization: True} and \texttt{Mem/IncrementalMemory: False} to prevent map modifications. The \texttt{Rtabmap/DetectionRate: 3.0} parameter optimizes loop closure detection frequency, balancing computational load against relocalization performance for operation in known environments.
 
 \begin{figure}[H]
     \centering
@@ -60,7 +60,7 @@ The system implements sophisticated orientation recovery mechanisms to handle RT
 
 \paragraph{Movement-Based Orientation Estimation}
 
-Upon detecting orientation loss, the \texttt{\_estimate\_orientation\_from\_movement} method activates a movement-based orientation recovery algorithm that reconstructs robot heading from position trajectory analysis. The algorithm maintains a configurable position history buffer (default 5 positions) storing recent UWB position measurements with temporal validation ensuring minimum 5cm movement thresholds between consecutive measurements to avoid noise-induced false orientation estimates.
+Upon detecting orientation loss, the\linebreak\texttt{\_estimate\_orientation\_from\_movement} method activates a movement-based orientation recovery algorithm that reconstructs robot heading from position trajectory analysis. The algorithm maintains a configurable position history buffer (default 5 positions) storing recent UWB position measurements with temporal validation ensuring minimum 5cm movement thresholds between consecutive measurements to avoid noise-induced false orientation estimates.
 
 The orientation calculation employs vector analysis of the most recent position displacement:
 \begin{align}
@@ -151,7 +151,7 @@ For person detection, the \texttt{get\_median\_depth} function extracts depth fr
 
 The \texttt{calculate\_3d\_position} function converts camera-frame coordinates using intrinsic parameters from the \texttt{camera\_info.k} array, extracting focal lengths \texttt{fx}, \texttt{fy} and principal point coordinates \texttt{cx}, \texttt{cy} from the calibration matrix. Automatic unit conversion detects depth values greater than 100 for millimeter to meter conversion, followed by depth calibration correction using configurable \texttt{depth\_scale\_factor} (default 0.575) and \texttt{depth\_offset} parameters derived from empirical calibration.
 
-3D coordinate calculation applies the standard pinhole camera model: \texttt{x\_3d = (x - cx) * z / fx} and \texttt{y\_3d = (y - cy) * z / fy}, where corrected depth \texttt{z = z * depth\_scale\_factor + depth\_offset} accounts for systematic depth measurement biases in the Oak-D Pro stereo system.
+3D coordinate calculation applies the standard pinhole camera model: \texttt{x\_3d = (x - cx) * z / fx} and \texttt{y\_3d = (y - cy) * z / fy}, where corrected depth \texttt{z = z * depth\_}\linebreak\texttt{scale\_factor + depth\_offset} accounts for systematic depth measurement biases in the Oak-D Pro stereo system.
 
 \subsubsection{3D Skeleton Generation with Temporal Consistency}
 
@@ -161,7 +161,7 @@ The 3D skeleton generation process combines 2D keypoint detections with correspo
 
 Depth value assignment utilizes 2D keypoint pixel coordinates to extract corresponding depth measurements from the stereo depth map with validation ensuring measurements correspond to human body parts rather than background objects. The \texttt{process\_skeleton} function implements sophisticated temporal smoothing where individual keypoint depths are validated against a reference depth calculated as the median of all valid keypoint depths.
 
-Outlier rejection filters keypoint depths deviating more than the configurable \texttt{depth\_outlier\_threshold} (default 30\%) from the reference, replacing them with temporal median depth from a smoothing window. Missing depth handling addresses invalid keypoint scenarios through reference depth fallback when coordinates are invalid ($x \leq 0$ or $y \leq 0$) or depth extraction fails.
+Outlier rejection filters keypoint depths deviating more than the configurable \texttt{depth\_}\linebreak\texttt{outlier\_threshold} (default 30\%) from the reference, replacing them with temporal median depth from a smoothing window. Missing depth handling addresses invalid keypoint scenarios through reference depth fallback when coordinates are invalid ($x \leq 0$ or $y \leq 0$) or depth extraction fails.
 
 Temporal smoothing maintains a \texttt{skeleton\_depth\_history} list with configurable window size (default 3 frames) storing reference depths for median filtering over time, providing stable depth values that reduce measurement jitter while maintaining responsiveness to actual depth changes.
 
@@ -215,7 +215,7 @@ Robot controller integration subscribes to \texttt{/human\_position} topic for s
 
 Pose-based behavior triggers utilize multiple data streams including raw skeleton data from \texttt{/human\_skeleton\_poses} for detailed joint analysis, smoothed position data from \texttt{/human\_position} for proximity detection, and visual markers from \texttt{/human\_skeleton} for debugging and visualization purposes. Safety monitoring implementation prioritizes closest person detection ensuring safety systems focus on the most immediate interaction partner.
 
-VR system integration transmits skeleton data through the dedicated \texttt{vr\_interface\_node.py} described in the software architecture, utilizing the three-port UDP protocol (port 5007 for 208-byte skeleton data at 10Hz) for immersive visualization and interaction analysis. The VR interface node formats skeleton data for Unity applications using the established COCO-format structure with exactly 17 joints, applying default (0,0,0) coordinates for missing joints to maintain data consistency. Data recording capabilities capture complete skeleton tracking sessions for offline analysis through synchronized pose data, camera images, and robot state information published across the multi-topic ROS2 architecture.
+VR system integration transmits skeleton data through the dedicated \texttt{vr\_interface\_}\linebreak\texttt{node.py} described in the software architecture, utilizing the three-port UDP protocol (port 5007 for 208-byte skeleton data at 10Hz) for immersive visualization and interaction analysis. The VR interface node formats skeleton data for Unity applications using the established COCO-format structure with exactly 17 joints, applying default (0,0,0) coordinates for missing joints to maintain data consistency. Data recording capabilities capture complete skeleton tracking sessions for offline analysis through synchronized pose data, camera images, and robot state information published across the multi-topic ROS2 architecture.
 
 The comprehensive skeleton tracking system provides the spatial and temporal human understanding necessary for sophisticated social robot behaviors, with the multi-modal data publishing architecture supporting both real-time robot control and offline analysis requirements for continued system improvement.
 
